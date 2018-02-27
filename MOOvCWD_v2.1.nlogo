@@ -122,6 +122,7 @@ globals
   fy-sr
   ma-sr
   fa-sr
+  far
 
   ;MOOvPOP( Agent-based model of deer population dynamics) generated deer population is used to initialize this model ('import-world'),
   ;hence global variables from MOOvPOP are also included.
@@ -176,6 +177,11 @@ to setup
       ]
   ]
   ask deers [
+    if groid != -1[
+      if distance deer groid > 3 [
+        set far far + 1
+        die
+    ]]
     set cwdm 20 + random 6
     set cwdi 3 + random 2
     set cwdc 15 + random 4
@@ -1886,7 +1892,7 @@ to deer-die
       ]
 
     [ if rn < fynhm [
-        ask deers with [ momid = [who] of myself and aim < 2.5 ][die]
+        ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][die]
         ifelse (gl > 0)[ new-group-leader ][ if (gr = -1) [review-group-dynamics] ]
         die
        ]
@@ -1906,7 +1912,7 @@ to deer-die
         [ let lmort 0.8
           if aim < 240 [ set lmort precision (fanhm - oldf) 3 ]
           if rn < lmort [
-            ask deers with [ momid = [who] of myself and aim < 2.5 ][die]
+            ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][die]
             ifelse (gl > 0)[ new-group-leader ][ if (gr = -1)[review-group-dynamics] ]
             die
           ]
@@ -1923,7 +1929,7 @@ to new-group-leader
  let lgroid groid
  let ngroid -1
 
- let my-group deers with [ groid = lgroid and who != lgroid]
+ let my-group deers in-radius-nowrap 3 with [ groid = lgroid and who != lgroid]
 
  let pot-groupleaders my-group with [ aim > 18 and sex = 2 ]
 
@@ -2256,6 +2262,7 @@ to deer-mating
 end
 
 to review-group-dynamics                                             ; turtle procedure: doe social group leader loses leadership status if no group members left
+  if groid = -1 [stop]
   ask deer groid[
     set gr (gr - 1)
     if (gr <= 0)[

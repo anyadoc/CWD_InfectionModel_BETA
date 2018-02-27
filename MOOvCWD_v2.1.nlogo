@@ -1,4 +1,4 @@
-extensions [gis]
+extensions [gis profiler]
 globals
 [
   dxp                                            ;x coordinate of the patch where a yearling deer belongs before dispersal (natal range)
@@ -1808,37 +1808,7 @@ to deer-die-CWD
           ]
           ]
           ifelse (gl > 0)
-          [ let adult-groupmembers deers with [ groid = tgroid and gl = 0 and sex = 2 and aim >= 18 ]
-            ifelse (count adult-groupmembers > 0)
-            [ ask n-of 1 adult-groupmembers [
-              set ttgroid who
-              set gl 1
-              set groid ttgroid
-              let group-members deers with [ groid = tgroid and gl = 0 ]
-              if (count group-members > 0)[
-                ask group-members [ set groid ttgroid ]
-              ]
-              set gr (count deers with [ groid = ttgroid and gl = 0 ])
-            ]
-            ]
-            [ let group-leaders-here deers with [ gl = 1 and groid != tgroid and gr < 3 ]
-              ifelse (count group-leaders-here > 0)
-              [ ask n-of 1 group-leaders-here [
-                set ttgroid groid
-                let transfer-deers deers with [ groid = tgroid and gl = 0 ]
-                set gr (gr + count transfer-deers)
-                ]
-                let group-members deers with [ groid = tgroid and gl = 0 ]
-                ask group-members [ set groid ttgroid ]
-                ]
-              [ let group-members deers with [ groid = tgroid and gl = 0 ]
-                ask group-members [
-                  set gr -2
-                  set groid -1
-                  ]
-                ]
-              set n_leaders_lost (n_leaders_lost + 1)
-            ]
+          [ new-group-leader
             ]
           [ if (gr = -1)[
             review-group-dynamics
@@ -1866,47 +1836,7 @@ to deer-die-CWD
               ]
             ]
           ifelse (gl > 0)
-          [ let group-members deers with [ groid = tgroid and aim > 18 and sex = 2 and gl = 0 ]
-            let zz (count group-members)
-            ifelse (zz > 0)
-            [ ifelse (any? group-members with [ aim > 29 ])
-              [ ask n-of 1 group-members with [ aim > 29 ][
-                set gl 1
-                set ttgroid who
-                set groid ttgroid
-                let old-group deers with [ groid = tgroid and gl = 0 ]
-                ask old-group [ set groid ttgroid ]
-                let new-group deers with [ groid = ttgroid and gl = 0 ]
-                set gr (count new-group)
-                ]
-                ]
-              [ ask n-of 1 group-members [
-                set gl 1
-                set ttgroid who
-                set groid ttgroid
-                let old-group deers with [ groid = tgroid and gl = 0 ]
-                ask old-group [ set groid ttgroid ]
-                let new-group deers with [ groid = ttgroid and gl = 0 ]
-                set gr (count new-group)
-                ]
-                ]
-              ]
-            [ let other-group-leaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-              let old-group deers with [ groid = tgroid and gl = 0 ]
-              ifelse (count other-group-leaders-here > 0)
-              [ ask n-of 1 other-group-leaders-here [
-                set ttgroid groid
-                set gr (gr + count old-group)
-                ]
-                ask old-group [ set groid ttgroid ]
-                ]
-              [ ask old-group [
-                set gr -2
-                set groid -1
-                ]
-                ]
-              set n_leaders_lost (n_leaders_lost + 1)
-              ]
+          [ new-group-leader
             ]
           [ if (gr = -1)[
             review-group-dynamics
@@ -1920,270 +1850,108 @@ to deer-die-CWD
     ]
 end
 to deer-die
-  set tgroid groid
-  if (sex = 2)[
-    set twho who
-    ]
+
+  let rn precision (random-float 1) 3
+
   ;------------------------------------------------------------- fawns upto 6 months
-  ifelse (aim < 6.5)
-  [ ifelse (sex = 1)
-    [if precision (random-float 1) 3 < mf6nhm [
-      set counter1 0
-      if (gr = -1)[
-        review-group-dynamics
-      ]
+  ifelse (aim < 6.5)[
+
+    let lmort mf6nhm
+    if(sex = 2)[set lmort ff6nhm]
+    if rn < lmort [
+      if (gr = -1)[review-group-dynamics]
       die
-      ]
     ]
-    [ if precision (random-float 1) 3 < ff6nhm [
-      set counter1 0
-      if (gr = -1)[
-        review-group-dynamics
-      ]
-      die
-      ]
-    ]
-    ]
+  ]
+
   ;---------------------------------------------------------------  7 to 12 months
-  [ ifelse (aim < 12.5)
-    [ ifelse (sex = 1)
-      [ if random-float 1 < mf12nhm [
-        set counter1 0
-        if (gr = -1)[
-          review-group-dynamics
-          ]
-        die
-        ]
-        ]
-      [ if random-float 1 < ff12nhm [
-        set counter1 0
-        if (gr = -1)[
-          review-group-dynamics
-        ]
-        die
-        ]
-      ]
-      ]
+  [ ifelse (aim < 12.5)[
+
+    let lmort mf12nhm
+    if (sex = 2)[ set lmort ff12nhm ]
+    if rn < lmort [
+      if (gr = -1)[review-group-dynamics]
+      die
+    ]
+  ]
+
     ;------------------------------------------------------------- 13 to 24
-    [ ifelse (aim < 24.5)
-      [ ifelse (sex = 1)
-        [ if random-float 1 < mynhm [
-          set counter1 0
-          if (gr = -1)[
-            review-group-dynamics
-          ]
+  [ ifelse (aim < 24.5) [
+
+    ifelse (sex = 1)[
+      if rn < mynhm [
+          if (gr = -1)[review-group-dynamics]
           die
-          ]
-          ]
-        [ if random-float 1 < fynhm [
-            if any? deers with [ momid = twho and aim < 2.5 ][
-              let my-fawns deers with [ momid = twho and aim < 2.5 ]
-              ask my-fawns [
-                set counter1 counter1 + 1
-                die
-              ]
-            ]
-          ifelse (gl > 0)
-          [ let pot-groupleaders deers with [ groid = tgroid and gl = 0 and sex = 2 and aim >= 18 ]           ; turtle procedure: if a doe social group leader dies, leadership is transferred or the group breaks down
-            ifelse (count pot-groupleaders > 0)
-            [ ask one-of pot-groupleaders [
-              set ttgroid who
-              set gl 1
-              set groid ttgroid
-              let transfer-group deers with [ groid = tgroid and gl = 0 ]
-              if (count transfer-group > 0)[
-                ask transfer-group [ set groid ttgroid ]
-                ]
-              let new-group deers with [ groid = ttgroid and gl = 0 ]
-              set gr (count new-group)
-              ]
-            ]
-            [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-              ifelse (count other-groupleaders-here > 0)
-              [ ask one-of other-groupleaders-here [
-                set ttgroid groid
-                let transfer-deers deers with [ groid = tgroid and gl = 0 ]
-                set gr (gr + count transfer-deers)
-                ]
-                let new-group deers with [ groid = tgroid and gl = 0 ]
-                ask new-group [ set groid ttgroid ]
-                ]
-              [ let group-members deers with [ groid = tgroid and gl = 0 ]
-                ask group-members [
-                  set gr -2
-                  set groid -1
-                  ]
-                ]
-              set n_leaders_lost (n_leaders_lost + 1)
-              ]
-            ]
-          [ if (gr = -1)[
-            review-group-dynamics
-            ]
-            ]
-          set counter1 0
-          die
-          ]
-          ]
         ]
-      ;--------------------------------------------------------------- male 25 to 240 and more than 240
-      [ ifelse (sex = 1)
-        [ ifelse (aim < 240)
-          [ if random-float 1 < precision (manhm - oldm) 3 [
-              if (ml = 1)[
-                set tmgroid mgroid
-                let my-group deers with [ mgroid = tmgroid ]
-                ask my-group [
-                  set mgroid -1
-                ]
-              ]
-              die
-            ]
-          ]
-          [ if random-float 1 < .8 [
-            if (ml = 1)[
-              set tmgroid mgroid
-              let my-group deers with [ mgroid = tmgroid ]
-              ask my-group [
-                set mgroid -1
-                ]
-              ]
+      ]
+
+    [ if rn < fynhm [
+        ask deers with [ momid = [who] of myself and aim < 2.5 ][die]
+        ifelse (gl > 0)[ new-group-leader ][ if (gr = -1) [review-group-dynamics] ]
+        die
+       ]
+     ]
+   ]
+   ;--------------------------------------------------------------- male 25 to 240 and more than 240
+  [ ifelse (sex = 1)
+        [ let lmort 0.8
+          if aim < 240 [ set lmort precision (manhm - oldm) 3 ]
+          if rn < lmort [
+            if ml = 1 [ask deers with [ mgroid = [groid] of myself ][set mgroid -1]]
             die
-            ]
-            ]
           ]
-        ;------------------------------------------------------------------- female 25 to 240
-        [ ifelse (aim < 240)
-          [ if random-float 1 < precision (fanhm - oldf) 3 [
-            let my-fawns deers with [ momid = twho and aim < 2.5 ]
-            if (count my-fawns > 0)[
-              ask my-fawns [
-                set counter1 counter1 + 1
-                die
-                ]
-              ]
-            ifelse (gl > 0)
-            [ let pot-groupleaders deers with [ groid = tgroid and aim > 18 and sex = 2 and gl = 0 ]
-              let zz count pot-groupleaders
-              ifelse (zz > 0)
-              [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-                [ ask one-of pot-groupleaders with [ aim > 29 ] [
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                [ ask one-of pot-groupleaders [
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                ]
-              [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-                ifelse (count other-groupleaders-here > 0)
-                [ ask one-of other-groupleaders-here [
-                  set ttgroid groid
-                  let add-deers deers with [ groid = tgroid and gl = 0 ]
-                  set gr (gr + count add-deers)
-                  ]
-                  let new-group deers with [ groid = tgroid and gl = 0 ]
-                  ask new-group [
-                    set groid ttgroid
-                    ]
-                  ]
-                [ let group-members deers with [ groid = tgroid and gl = 0 ]
-                  ask group-members[
-                    set gr -2
-                    set groid -1
-                    ]
-                  ]
-                set n_leaders_lost (n_leaders_lost + 1)
-                ]
-              ]
-            [ if (gr = -1)[
-              review-group-dynamics
-              ]
-            ]
-            set counter1 0
+         ]
+
+   ;------------------------------------------------------------------- female 25 to 240
+        [ let lmort 0.8
+          if aim < 240 [ set lmort precision (fanhm - oldf) 3 ]
+          if rn < lmort [
+            ask deers with [ momid = [who] of myself and aim < 2.5 ][die]
+            ifelse (gl > 0)[ new-group-leader ][ if (gr = -1)[review-group-dynamics] ]
             die
-            ]
-          ]
-          ;-------------------------------------------------------------------- female 240 and more
-          [ if random-float 1 < .8 [
-            if any? deers with [ momid = twho and aim < 2.5 ][
-              let my-fawns deers with [ momid = twho and aim < 2.5 ]
-              ask my-fawns [
-                set counter1 counter1 + 1
-                die
-                ]
-              ]
-            ifelse (gl > 0)
-            [ let pot-groupleaders deers with [ groid = tgroid and aim > 18 and sex = 2 and gl = 0 ]
-              let zz count pot-groupleaders
-              ifelse (zz > 0)
-              [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-                [ ask one-of pot-groupleaders with [ aim > 29 ][
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                [ ask one-of pot-groupleaders [
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                ]
-              [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-                ifelse (count other-groupleaders-here > 0)
-                [ ask one-of other-groupleaders-here [
-                  set ttgroid groid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  set gr (gr + count my-group)
-                  ]
-                  let new-group deers with [ groid = tgroid and gl = 0 ]
-                  ask new-group [ set groid ttgroid ]
-                  ]
-                [ let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [
-                    set gr -2
-                    set groid -1
-                    ]
-                  ]
-                set n_leaders_lost (n_leaders_lost + 1)
-                ]
-              ]
-            [ if (gr = -1)[
-              review-group-dynamics
-              ]
-            ]
-            set counter1 0
-            die
-            ]
           ]
         ]
       ]
     ]
   ]
+
 end
+;============================================================
+
+to new-group-leader
+
+ let lgroid groid
+ let ngroid -1
+
+ let my-group deers with [ groid = lgroid and who != lgroid]
+
+ let pot-groupleaders my-group with [ aim > 18 and sex = 2 ]
+
+ ifelse (any? pot-groupleaders)
+  [ ifelse (any? pot-groupleaders with [ aim > 29 ])
+    [ set ngroid ([who] of one-of pot-groupleaders with [aim > 29])]
+    [ set ngroid ([who] of one-of pot-groupleaders) ]]
+  [ let other-groupleaders-here deers-here with [ gl = 1 and gr < 3 and who != lgroid ]
+    if (any? other-groupleaders-here)
+    [ set ngroid ([who] of one-of other-groupleaders-here) ]
+  ]
+
+  ifelse ngroid = -1
+  [ ask my-group [set gr -2 set groid -1 ] ]
+  [
+    if not is-turtle? turtle ngroid [user-message ngroid]
+    ask deer ngroid [
+      set gl 1
+      if gr < 0 [set gr 0]
+      set gr (gr + count my-group)
+    ]
+    ask my-group [ set groid ngroid ]
+  ]
+
+  set n_leaders_lost (n_leaders_lost + 1)
+
+end
+
 ;============================================================
 to hunting-mortality-mf12
   if (gr = -1)[
@@ -2297,38 +2065,7 @@ to hunting-mortality-my-sr
 end
 to hunting-mortality-fy
   ifelse (gl > 0)
-  [ let pot-groupleaders deers with [ groid = tgroid and gl = 0 and sex = 2 and aim > 18 ]
-    ifelse (count pot-groupleaders > 0)
-    [ ask one-of pot-groupleaders [
-      set ttgroid who
-      set gl 1
-      set groid ttgroid
-      let transfer-group deers with [ groid = tgroid and gl = 0 ]
-      let xgr count transfer-group
-      ask transfer-group [ set groid ttgroid ]
-      set gr xgr
-      ]
-      ]
-    [ let other-groupleaders-here deers with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-        set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xgr count transfer-group
-        set gr (gr + xgr)
-        ]
-        let new-group deers with [ groid = tgroid and gl = 0 ]
-        ask new-group [ set groid ttgroid ]
-        ]
-      [ let group-members deers with [ groid = tgroid and gl = 0 ]
-        ask group-members [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  [ new-group-leader]
   [ if (gr = -1)[
     set counter1 0
     review-group-dynamics
@@ -2352,38 +2089,7 @@ to hunting-mortality-fy
 end
 to hunting-mortality-fy-sr
   ifelse (gl > 0)
-  [ let pot-groupleaders deers with [ groid = tgroid and gl = 0 and sex = 2 and aim > 18 ]
-    ifelse (count pot-groupleaders > 0)
-    [ ask one-of pot-groupleaders [
-      set ttgroid who
-      set gl 1
-      set groid ttgroid
-      let transfer-group deers with [ groid = tgroid and gl = 0 ]
-      let xgr count transfer-group
-      ask transfer-group [ set groid ttgroid ]
-      set gr xgr
-      ]
-      ]
-    [ let other-groupleaders-here deers with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-        set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xgr count transfer-group
-        set gr (gr + xgr)
-        ]
-        let new-group deers with [ groid = tgroid and gl = 0 ]
-        ask new-group [ set groid ttgroid ]
-        ]
-      [ let group-members deers with [ groid = tgroid and gl = 0 ]
-        ask group-members [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  [ new-group-leader]
   [ if (gr = -1)[
     set counter1 0
     review-group-dynamics
@@ -2441,51 +2147,7 @@ to hunting-mortality-ma-sr
   die
 end
 to hunting-mortality-fa
-  if (gl = 1)[
-    let pot-groupleaders deers with [ groid = tgroid and sex = 2 and aim > 18 and gl = 0 ]
-    let zz count pot-groupleaders
-    ifelse (zz > 0)
-    [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-      [ ask one-of pot-groupleaders with [ aim > 29 ][
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group [ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      [ ask one-of pot-groupleaders [
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group [ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      ]
-    [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-       set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        set gr (gr + xtr)
-        ask transfer-group [ set groid ttgroid ]
-        ]
-        ]
-      [ let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        ask transfer-group [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  if (gl = 1)[new-group-leader]
   if (gr = -1) [
     set counter1 0
     review-group-dynamics
@@ -2507,51 +2169,7 @@ to hunting-mortality-fa
     ]
 end
 to hunting-mortality-fa-sr
-  if (gl = 1)[
-    let pot-groupleaders deers with [ groid = tgroid and sex = 2 and aim > 18 and gl = 0 ]
-    let zz count pot-groupleaders
-    ifelse (zz > 0)
-    [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-      [ ask one-of pot-groupleaders with [ aim > 29 ][
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group[ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      [ ask one-of pot-groupleaders [
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group [ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      ]
-    [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-       set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        set gr (gr + xtr)
-        ask transfer-group [ set groid ttgroid ]
-        ]
-        ]
-      [ let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        ask transfer-group [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  if (gl = 1)[new-group-leader]
   if (gr = -1)[
     set counter1 0
     review-group-dynamics
@@ -2636,9 +2254,10 @@ to deer-mating
     set anm avmates
   ]
 end
+
 to review-group-dynamics                                             ; turtle procedure: doe social group leader loses leadership status if no group members left
-  ask deer tgroid[
-    set gr (gr - (counter1 + 1))
+  ask deer groid[
+    set gr (gr - 1)
     if (gr <= 0)[
       set gl 0
       set groid -1
@@ -2647,6 +2266,7 @@ to review-group-dynamics                                             ; turtle pr
       ]
     ]
 end
+
 to-report d
   report remainder ticks 12 + 1
 end
@@ -2678,8 +2298,8 @@ end
 GRAPHICS-WINDOW
 665
 33
-1522
-293
+823
+252
 -1
 -1
 6.0
@@ -2693,9 +2313,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-141
+24
 0
-41
+34
 0
 0
 1
@@ -3205,7 +2825,7 @@ CHOOSER
 cwd_region
 cwd_region
 "Boone County" "Callaway County" "Carroll County" "Chariton County" "Cole County" "Cooper County" "Franklin County" "Gasconade County" "Knox County" "Linn County" "Livingston County" "Miller County" "Moniteau County" "Morgan County" "Osage County" "Putnam County" "Randolph County" "Schuyler County" "Scotland County" "Shelby County" "St. Charles County" "St. Louis County" "Sullivan County" "Warren County" "Washington County" "MaconLinnCoreArea" "Seven County"
-26
+13
 
 TEXTBOX
 161

@@ -262,10 +262,10 @@ to go
   if (ticks = 60) [
     stop
   ]
-  if (d = 1 or d = 7) [
+  ;if (d = 1 or d = 7) [
     ;ask deers [ ht ]                                             ;v2.1 deer ht in setup
-    export-interface (word "CWD landscape month " ticks ".png")
-    ]
+    ;export-interface (word "CWD landscape month " ticks ".png")
+    ;]
   if (ticks = 0)[
     let inf-focus nobody
     ifelse subregion = TRUE                                   ;v2.1 after adding a switch for subregion
@@ -321,81 +321,21 @@ to go
     set fa-sr count deers-sr with [ sex = 2 and aim > 30 ]
     let posthpop (mf + my + ma + ff + fy + fa)
     let posthpop-sr (mf-sr + my-sr + ma-sr + ff-sr + fy-sr + fa-sr)
-    let tmbg ((my + ma) / 4)
-    let male-leaders deers with [ ml = 1 ]
-    let count-ml count male-leaders
-    let pot-leaders deers with [ sex = 1 and aim > 32 and ml = 0 ]
-    if (tmbg > count-ml)[
-      ask n-of (tmbg - count-ml) pot-leaders [
-        set ml 1
-        set mgroid who
-      ]
-    ]
-    set male-leaders deers with [ ml = 1 ]
-    ask male-leaders [
-      bachelor-group-formation
-    ]
-    ask male-leaders [
-      set tmgroid mgroid
-      set gr (count deers with [ mgroid = tmgroid ])
-    ]
+
+    form-bachelor-groups
+
     set oldm precision (count deers with [ sex = 1 and aim >= 229 ] / ma) 3
     set oldf precision (count deers with [ sex = 2 and aim >= 229 ] / fa) 3
+
     ]
-  if (d > 1 and d < 10)[              ;turtle procedure: bachelor group leaders assess their group membership
-    let male-leaders deers with [ ml = 1 ]
-    ask male-leaders[
-      set tmgroid mgroid
-      set gr (count deers with [ mgroid = tmgroid ])
-      if (gr <= 1)[ set ml 0]
-      ]
-    ]
+
   if (d = 10)[              ;turtle procedure: bachelor groups break down before the rutting season
     let male-leaders deers with [ ml = 1 ]
     ask male-leaders [ set gr 0 ]
     ]
   if (d = 5) [
-    let male-yearlings deers with [ aim = 13 and sex = 1 ]
-    ask male-yearlings [
-      set tgroid groid
-      if (gr = -1) [
-        ask deer tgroid [
-          set gr (gr - 1)
-          if (gr <= 0) [
-            set gl 0
-            set groid -1
-            set gr -2
-            set n_leaders_lost (n_leaders_lost + 1)
-            ]
-          ]
-        ]
-      set gr -2
-      set groid -1
-      if (random-float 1 < yearling-male-dispersal-rate) [
-        set mgroid -1
-        deer-mdisperse
-        ]
-      ]
-    let female-yearlings deers with [ aim = 13 and sex = 2 ]
-    ask female-yearlings [
-      if (random-float 1 < 0.22) [
-        set tgroid groid
-        if (gr = -1)[
-          ask deer tgroid[
-            set gr (gr - 1)
-            if (gr <= 0)[
-              set gl 0
-              set groid -1
-              set gr -2
-              set n_leaders_lost (n_leaders_lost + 1)
-              ]
-            ]
-          ]
-        set gr -2
-        set groid -1
-        deer-fdisperse
-        ]
-      ]
+    yearlings-disperse
+
     let breeding-females deers with [ sex = 2 and aim > 12 and cwdpr < cwdc] ;22Nov17 added cwdpr < cwdc
     ask breeding-females[
       if (aim = 13) [
@@ -1877,6 +1817,7 @@ to deer-die
     if (sex = 2)[ set lmort ff12nhm ]
     if rn < lmort [
       if (gr = -1)[review-group-dynamics]
+      if (sex = 1 and mgroid > 0)[review-bachelor-group]
       die
     ]
   ]
@@ -1887,6 +1828,7 @@ to deer-die
     ifelse (sex = 1)[
       if rn < mynhm [
           if (gr = -1)[review-group-dynamics]
+          if (mgroid > 0)[review-bachelor-group]
           die
         ]
       ]
@@ -1903,7 +1845,9 @@ to deer-die
         [ let lmort 0.8
           if aim < 240 [ set lmort precision (manhm - oldm) 3 ]
           if rn < lmort [
-            if ml = 1 [ask deers with [ mgroid = [groid] of myself ][set mgroid -1]]
+            ifelse ml = 1
+            [ask deers with [ mgroid = [groid] of myself ][set mgroid -1]]
+            [review-bachelor-group]
             die
           ]
          ]
@@ -2192,28 +2136,72 @@ to hunting-mortality-fa-sr
   set taft-sr taft-sr + 1
   die
 end
-to bachelor-group-formation
-  set tmgroid mgroid
-  let group-members deers in-radius-nowrap 1.5 with [ mgroid = tmgroid and ml = 0 ]
-  let cgs (count group-members)
-  let cgs1 0
-  let pot-gr-size mean-bachelor-group-size
-  if (cgs < pot-gr-size) [
-    let pot-groupmembers-here deers in-radius-nowrap 1.5 with [ mgroid = -1 and ml = 0 ]
-    set cgs1 (count pot-groupmembers-here)
-    ifelse (cgs1 >= (pot-gr-size - cgs))
-    [ ask n-of (pot-gr-size - cgs) pot-groupmembers-here [
-      set mgroid tmgroid
+
+to form-bachelor-groups
+
+  if d = 1 [ ;Form groups
+
+    let tmbg ((my + ma) / 4) ; appropriate # of group leaders
+    let male-leaders deers with [ ml = 1 ]
+    let diff (tmbg - count male-leaders)
+
+    if (diff > 0)[ ;designate new group leaders to fill up slots
+      let new-leaders n-of diff deers with [ sex = 1 and aim > 32 and ml = 0 ]
+      ask new-leaders [
+        set ml 1
+        set mgroid who
       ]
+      set male-leaders (turtle-set male-leaders new-leaders) ;add to leaders group
+    ]
+
+    ask male-leaders [ ;Fill out groups
+
+      let lgroid mgroid
+
+      let pot-groupmembers-here deers in-radius-nowrap 1.5 with [ mgroid = -1 and ml = 0 ]
+      let group-members pot-groupmembers-here with [ mgroid = lgroid ]
+
+      let to-fill max (list 0 (round mean-bachelor-group-size - count group-members)) ;needed members
+      let possible-fills count pot-groupmembers-here
+
+      if to-fill > 0 [ ;fill to target if possible
+        let new-members n-of (min list to-fill possible-fills) pot-groupmembers-here
+        ask new-members [
+          set mgroid lgroid
+        ]
+        set group-members (turtle-set group-members new-members)
       ]
-    [ if (cgs1 > 0)[
-      ask n-of cgs1 pot-groupmembers-here [
-        set mgroid tmgroid
-      ]
-      ]
+
+      set gr count group-members
+      if gr <= 1 [ set ml 0 ]
+
+    ]
+  ]
+
+end
+
+to review-bachelor-group
+  if (d = 1 or d > 10)[stop]
+  if is-turtle? deer mgroid [
+    ask deer mgroid [
+      set gr (gr - 1)
+      if gr <= 1 [ set ml 0 ]
     ]
   ]
 end
+
+;to bachelor-group-status
+;
+;  if (d > 1 and d < 10)[ ;bachelor group leaders assess their group membership
+;    ask deers with [ml = 1][
+;      set gr (count deers in-radius-nowrap 3 with [ mgroid = [mgroid] of myself ])
+;      if (gr <= 1)[ set ml 0]
+;      ]
+;  ]
+;
+;end
+
+
 to deer-mating
   ifelse (aim > 30)
   [ set ter 1.5
@@ -2262,7 +2250,12 @@ to deer-mating
 end
 
 to review-group-dynamics                                             ; turtle procedure: doe social group leader loses leadership status if no group members left
-  if groid = -1 [stop]
+  if (groid = -1 or gr = -2) [stop]
+  if not is-turtle? deer groid [
+    set groid -1
+    set gr -2
+    stop
+  ]
   ask deer groid[
     set gr (gr - 1)
     if (gr <= 0)[
@@ -2272,6 +2265,30 @@ to review-group-dynamics                                             ; turtle pr
       set n_leaders_lost (n_leaders_lost + 1)
       ]
     ]
+end
+
+to yearlings-disperse
+  if d != 5 [stop]
+
+  ask deers with [ aim = 13 and gr = -1 ][
+
+    let disp-prob random-float 1
+
+    ifelse sex = 1
+    [ review-group-dynamics ;leave maternal group
+      set gr -2 set groid -1
+      if disp-prob < yearling-male-dispersal-rate [
+        set mgroid -1 ; now elgible to join bachelor group
+        deer-mdisperse ;disperse
+      ]]
+    [ if disp-prob < yearling-female-dispersal-rate [
+         review-group-dynamics ;leave maternal group
+         set gr -2 set groid -1
+         deer-fdisperse
+      ]]
+
+  ]
+
 end
 
 to-report d

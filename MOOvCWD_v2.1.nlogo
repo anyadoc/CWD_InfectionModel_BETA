@@ -295,21 +295,24 @@ to go
   let cwd-deers deers with [ cwd = 1 ]
   ask cwd-deers [
     cwd-progression
-    ask patch-here [
-      if (pcolor != red)[
-        set pcolor red
-        ]
-      ]
+;    ask patch-here [
+;      if (pcolor != yellow)[
+;        set pcolor yellow
+;        ]
+;      ]
     ]
-  ask patches with [ pcolor = red ][
-    if not any? deers-here with [ cwd = 1 ][
-      set pcolor scale-color green forest-percent 1 0
-      set plabel 0
-      ]
-    ]
-  ask patches with [ pcolor = red ] [
-    set plabel count deers-here with [cwd = 1]
-    ]
+;  ask patches with [ pcolor = yellow ][
+;    if not any? deers-here with [ cwd = 1 ][
+;      set pcolor scale-color green forest-percent 1 0
+;      ;set plabel 0
+;      ]
+;    ]
+;  ask patches with [ pcolor = yellow ] [
+;    ;set plabel count deers-here with [cwd = 1]
+;    ifelse count deers-here with [cwd = 1] > 5
+;    [ set pcolor orange ]
+;    [if count deers-here with [cwd = 1] > 10 [ set pcolor red ]]
+;    ]
   if (d = 1) [
     set vals 0
     set vals1 0
@@ -601,6 +604,30 @@ to go
   set-current-plot "deer population"
   if (ticks = 0)[ clear-plot set-plot-pen-color blue set-plot-x-range 0 130 ]
   plotxy ticks count deers
+;
+;  ask patches with [ pcolor = yellow ][
+;    if not any? deers-here with [ cwd = 1 ][
+;      set pcolor scale-color green forest-percent 1 0
+;      ;set plabel 0
+;      ]
+;    ]
+  ask patches [
+    if dh = -1 [stop]
+    ;set plabel count deers-here with [cwd = 1]
+    let cwds count deers-here with [cwd = 1]
+    ifelse cwds = 0
+    [ set pcolor scale-color green forest-percent 1 0 ]
+    [ ifelse cwds < 4
+      [set pcolor yellow ]
+      [ifelse cwds < 7
+        [ set pcolor orange ]
+        [ set pcolor red ]
+  ]]
+  ]
+
+
+
+
   tick
 end
 
@@ -1453,9 +1480,9 @@ to deer-reproduce
   ifelse (aim < 13.5)
   [ hatch-deers 1 [
     set aim 1
-    set shape "deer"
-    set color orange
-    set size 1.5
+    ;set shape "deer"
+    ;set color orange
+    ;set size 1.5
     set gl 0
     set cwd 0
     set cwdm 20 + random 6
@@ -1472,9 +1499,9 @@ to deer-reproduce
     ]
   [ hatch-deers 2 [
     set aim 1
-    set shape "deer"
-    set color orange
-    set size 1.5
+    ;set shape "deer"
+    ;set color orange
+    ;set size 1.5
     set gl 0
     set cwd 0
     set cwdm 20 + random 6
@@ -2329,8 +2356,8 @@ end
 GRAPHICS-WINDOW
 665
 33
-1525
-294
+823
+252
 -1
 -1
 6.0
@@ -2344,9 +2371,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-141
+24
 0
-41
+34
 0
 0
 1
@@ -2856,7 +2883,7 @@ CHOOSER
 cwd_region
 cwd_region
 "Boone County" "Callaway County" "Carroll County" "Chariton County" "Cole County" "Cooper County" "Franklin County" "Gasconade County" "Knox County" "Linn County" "Livingston County" "Miller County" "Moniteau County" "Morgan County" "Osage County" "Putnam County" "Randolph County" "Schuyler County" "Scotland County" "Shelby County" "St. Charles County" "St. Louis County" "Sullivan County" "Warren County" "Washington County" "MaconLinnCoreArea" "Seven County"
-26
+13
 
 TEXTBOX
 161

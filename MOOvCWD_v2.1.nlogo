@@ -176,12 +176,13 @@ to setup
       ask test-patches [set trialL 1]
       ]
   ]
-  ask deers [
-    if groid != -1[
+  ask deers with [ groid > 0 ] [
       if distance deer groid > 3 [
         set far far + 1
-        die
-    ]]
+        set groid -1 set gr -2
+  ]]
+
+  ask deers [
     set cwdm 20 + random 6
     set cwdi 3 + random 2
     set cwdc 15 + random 4
@@ -230,6 +231,7 @@ to setup-landscape
   if (cwd_region = "Washington County")[import-world "PostHarvestPopulationWashingtonCounty_v2.csv"]
   if (cwd_region = "MaconLinnCoreArea")[import-world "PostHarvestPopulationMaconLinnCoreArea_v2.csv"]
   if (cwd_region = "Seven County")[import-world "PostHarvestPopulationSevenCounty_v2.csv"]
+  ask deers [ set hidden? TRUE ]
 end
 ;------------------------------------------------------------
 to-report doe-group-size-regulator
@@ -334,132 +336,11 @@ to go
     ask male-leaders [ set gr 0 ]
     ]
   if (d = 5) [
-
     yearlings-disperse
 
-    females-reproduce-old
+    females-reproduce-group
 
-;    let breeding-females deers with [ sex = 2 and aim > 12 and cwdpr < cwdc] ;22Nov17 added cwdpr < cwdc
-;    ask breeding-females [
-
-;      if (aim = 13) [
-;        if (random 100 < 21)[
-;          set grfis 0
-;          set tgroid groid
-;          ifelse (tgroid >= 0)
-;          [ ask deer tgroid [
-;              ifelse (gr > 4)
-;              [ set gr (gr - 1)
-;                set tgroid -1
-;                set tgr -2
-;                set grfis 1
-;              ]
-;              [ set gr (gr + 1)
-;                set tgroid groid
-;                set tgr -1
-;              ]
-;              ]
-;          if (grfis = 1)[
-;            set groid -1
-;            set gr -2
-;          ]
-;          ]
-;          [ set tgroid -1
-;            set tgr -2
-;          ]
-;          deer-reproduce
-;          ]
-;        ]
-;      if (aim > 24)[
-;        if (random 100 < 81)[
-;          set grfis 0
-;          set tgroid groid
-;          ifelse (gl > 0)
-;          [set gr (gr + 2)
-;            if (gr > 6)[
-;              let xgr gr - 6
-;              let group-members deers with [ groid = tgroid and sex = 2 and aim > 13 and gl = 0 ]
-;              ifelse (count group-members >= xgr)
-;              [ set ngr xgr ]
-;              [ set ngr count group-members ]
-;              ask n-of ngr group-members [
-;                new-group-formation
-;                ]
-;              ]
-;            set tgr -1
-;            ]
-;          [ ifelse (groid < 0)
-;            [ ifelse (aim > 36 and n_leaders_lost > 0)
-;              [set gl 1
-;                set gr 2
-;                set groid who
-;                set tgroid who
-;                set tgr -1
-;                set n_leaders_lost (n_leaders_lost - 1)
-;                ]
-;              [ set tgroid -1
-;                set tgr -2
-;                ]
-;              ]
-;            [ ask deer tgroid [
-;                ifelse (gr > 4)
-;                [ set gr (gr - 1)
-;                  set tgroid -1
-;                  set tgr -2
-;                  set grfis 1
-;                ]
-;                [ set gr (gr + 2)
-;                  set tgroid groid
-;                  set tgr -1
-;                ]
-;            ]
-;            if (grfis = 1)[
-;              set groid -1
-;              set gr -2
-;              ]
-;            ]
-;            ]
-;          deer-reproduce
-;          ]
-;      ]
-
-
-;      ;---------------------------Join-group-------------------------------------------------------------------------
-;      if (gl = 1 and gr < 4)[
-;        set tgroid groid
-;        let solitary-adult-females-here deers in-radius-nowrap 1.5 with [ sex = 2 and gr = -2 and aim >= 13 and cwdpr < cwdc ]
-;        set sd count solitary-adult-females-here
-;        set tgr 0
-;        if (sd > 0)[
-;          ifelse (sd > 2)
-;          [ set sd1 2 ]
-;          [ set sd1 1 ]
-;          ask n-of sd1 solitary-adult-females-here [
-;            set tmomid who
-;            set groid tgroid
-;            set gr -1
-;            set tgr (tgr + 1)
-;            if any? deers with [ momid = tmomid and aim = 1 ][
-;              let my-fawns deers with [ momid = tmomid and aim = 1 ]
-;              ask my-fawns [
-;                set groid tgroid
-;                set gr -1
-;                set tgr (tgr + 1)
-;                ]
-;              ]
-;            ]
-;          ]
-;        set gr (gr + tgr)
-;        if (gr = 0)[
-;          set groid -1
-;          set gr -2
-;        ]
-;        ]
-;    ]
   ]
-
-
-
 
   if (d = 11) [
     let solitary-male-yearlings deers with [ sex = 1 and aim = 19 and gr = -2 and mgroid = -2 ]
@@ -529,7 +410,6 @@ to go
     set vals3 (list (ma-sr) (my-sr) (mf-sr) (fa-sr) (fy-sr) (ff-sr) (phn-sr) (mcwd-sr) (mycwd-sr) (mfcwd-sr) (fcwd-sr) (fycwd-sr) (ffcwd-sr) (totcwdd-sr))
     set vals6 (list (test_area) (mf12hm-sr) (ff12hm-sr) (myhm-sr) (fyhm-sr) (mahm-sr) (fahm-sr) (phn-sr) (totcwdd-sr))
   ]
-
   if (d = 12) [
     ask deers [
       if (aim < 10)[
@@ -1568,43 +1448,21 @@ to cwd-progression
       ]
     ]
 end
-
-to init-fawn
-  set hidden? true
-  set aim 1
-  ;set shape "deer"
-  ;set color orange
-  ;set size 1.5
-  set gl 0
-  set cwd 0
-  set cwdm 20 + random 6
-  set cwdi 3 + random 2
-  set cwdc 15 + random 4
-  ;set gr tgr
-  ifelse random 100 < 51
-  [ set sex 1
-    set mgroid -2 ]
-  [ set sex 2 ]
-end
-
-
 to deer-reproduce
-  let lmom who
-  let lgroid groid
-  ifelse (aim < 14)
+  set mom who
+  ifelse (aim < 13.5)
   [ hatch-deers 1 [
-    set hidden? true
     set aim 1
-    ;set shape "deer"
-    ;set color orange
-    ;set size 1.5
+    set shape "deer"
+    set color orange
+    set size 1.5
     set gl 0
     set cwd 0
     set cwdm 20 + random 6
     set cwdi 3 + random 2
     set cwdc 15 + random 4
-    set momid lmom
-    set groid lgroid
+    set momid mom
+    set groid tgroid
     set gr tgr
     ifelse random 100 < 51
     [ set sex 1
@@ -1613,19 +1471,18 @@ to deer-reproduce
     ]
     ]
   [ hatch-deers 2 [
-    set hidden? true
     set aim 1
-    ;set shape "deer"
-    ;set color orange
-    ;set size 1.5
+    set shape "deer"
+    set color orange
+    set size 1.5
     set gl 0
     set cwd 0
     set cwdm 20 + random 6
     set cwdi 3 + random 2
     set cwdc 15 + random 4
-    set momid lmom
+    set momid mom
     ;set ownid who
-    set groid lgroid
+    set groid tgroid
     set gr tgr
     ifelse random 100 < 51
     [ set sex 1
@@ -1719,11 +1576,11 @@ to finalize-home-patch
     ]
 end
 to new-group-formation
-  let lgroid groid
+  set tgroid groid
   set groid -1
-  let lmom who
+  set ttgroid who
   set tgr 0
-  let my-fawns deers in-radius-nowrap 1.5 with [ momid = lmom and aim = 1 ]
+  let my-fawns deers with [ momid = ttgroid and aim = 1 ]
   if any? my-fawns [
     ask my-fawns [
       set gr -2
@@ -1732,7 +1589,7 @@ to new-group-formation
     ]
     ]
   set gr -2
-  ask deer lgroid[
+  ask deer tgroid[
     set gr (gr - (tgr + 1))
     ]
 end
@@ -2325,100 +2182,16 @@ to yearlings-disperse
 
 end
 
-to females-reproduce
+to females-reproduce-group
 
-  if d != 5 [stop]
-
-  ask deers with [ sex = 2 and aim = 13 and cwdpr < cwdc ] [
-
-    let lgroid groid
-    let lmom who
-
-    if random-float 1 < 0.21 [ ; repro success ( 1 fawn)
-
-      ifelse is-turtle? deer groid ; if in group
-      [ ask deer groid [
-          ifelse gr > 4 ; too large. reproducing deer leaves group
-          [ set gr ( gr - 1)
-            set lgroid -1 ]
-          [ set gr ( gr + 1) ] ; otherwise new fawn added to group
-        ]
-        if lgroid = -1 [ set groid -1 set gr -2 ] ; leave group if necessary
-      ]
-      [ set groid -1 set gr -2 ] ; leave group if it didn't exist
-
-      ;New fawn produced
-      hatch-deers 1 [
-        set momid lmom
-        set groid lgroid
-        init-fawn
-      ]
-    ]
-  ]
-
-  ask deers with [ sex = 2 and aim > 24 and cwdpr < cwdc ] [
-
-    let lgroid groid
-    let lmom who
-
-    if random-float 1 < 0.81 [ ; repro success ( 2 fawns)\
-
-      ifelse gl = 1
-      [ let diff (gr + 2) - 6 ;I am a group leader
-        if diff > 0 [
-          let group-members deers in-radius-nowrap 3 with [ groid = lgroid and sex = 2 and aim > 13 and gl = 0 ]
-          ask n-of (min list diff count group-members) group-members [
-            set groid -1
-            set gr -2
-            let llmom who
-            ask deers in-radius-nowrap 1 with [ momid = llmom and aim < 3 ][
-             set groid -1 set gr -2
-            ]
-          ]
-        ]
-      ]
-
-      [ ifelse is-turtle? deer groid ; if member of group
-        [ ask deer groid [
-            ifelse gr > 4 ; too large. reproducing deer leaves group
-            [ set gr ( gr - 1)
-              set lgroid -1 ]
-            [ set gr ( gr + 2) ] ; otherwise new fawns added to group
-          ]
-          if lgroid = -1 [ set groid -1 set gr -2 ] ; leave group if necessary
-        ]
-        [ ifelse aim > 36  ; not in group but old enough, make new one with fawns?
-          [ set gl 1 ;yes
-            set groid who
-            set gr 2
-            set lgroid who  ]
-          [ set groid -1 set gr -2  ] ;no
-        ]
-       ]
-
-      ;New fawn produced
-      hatch-deers 2 [
-        set momid lmom
-        set groid lgroid
-        init-fawn
-      ]
-    ]
-  ]
-
-end
-
-to females-reproduce-old
-
-    let breeding-females deers with [ sex = 2 and aim > 12 and cwdpr < cwdc] ;22Nov17 added cwdpr < cwdc
-    ask breeding-females [
-
-      let lgroid groid
-
+let breeding-females deers with [ sex = 2 and aim > 12 and cwdpr < cwdc] ;22Nov17 added cwdpr < cwdc
+    ask breeding-females[
       if (aim = 13) [
         if (random 100 < 21)[
           set grfis 0
-          ifelse is-turtle? groid
-          [ ask deer groid [
+          set tgroid groid
+          ifelse (tgroid >= 0)
+          [ ask deer tgroid [
               ifelse (gr > 4)
               [ set gr (gr - 1)
                 set tgroid -1
@@ -2444,11 +2217,12 @@ to females-reproduce-old
       if (aim > 24)[
         if (random 100 < 81)[
           set grfis 0
+          set tgroid groid
           ifelse (gl > 0)
           [set gr (gr + 2)
             if (gr > 6)[
               let xgr gr - 6
-              let group-members deers in-radius-nowrap 3 with [ groid = lgroid and sex = 2 and aim > 13 and gl = 0 ]
+              let group-members deers in-radius-nowrap 3 with [ groid = tgroid and sex = 2 and aim > 13 and gl = 0 ]
               ifelse (count group-members >= xgr)
               [ set ngr xgr ]
               [ set ngr count group-members ]
@@ -2458,23 +2232,28 @@ to females-reproduce-old
               ]
             set tgr -1
             ]
-          [ ifelse (groid < 0 or not is-turtle? groid)
-            [ if (aim > 36 and n_leaders_lost > 0)
+          [ ifelse (groid < 0 or not is-turtle? deer groid)
+            [ ifelse (aim > 36 and n_leaders_lost > 0)
               [set gl 1
                 set gr 2
                 set groid who
+                set tgroid who
                 set tgr -1
                 set n_leaders_lost (n_leaders_lost - 1)
                 ]
-
+              [ set tgroid -1
+                set tgr -2
+                ]
               ]
-            [ ask deer groid [
+            [ ask deer tgroid [
                 ifelse (gr > 4)
                 [ set gr (gr - 1)
+                  set tgroid -1
                   set tgr -2
                   set grfis 1
                 ]
                 [ set gr (gr + 2)
+                  set tgroid groid
                   set tgr -1
                 ]
             ]
@@ -2502,11 +2281,13 @@ to females-reproduce-old
             set groid tgroid
             set gr -1
             set tgr (tgr + 1)
-            ask deers in-radius-nowrap 1.5 with [ momid = tmomid and aim = 1 ] [
-                set groid tgroid
-                set gr -1
-                set tgr (tgr + 1)
-          ]
+            ask deers in-radius-nowrap 1.5 with [ momid = tmomid and aim = 1 ][
+              set groid tgroid
+              set gr -1
+              set tgr (tgr + 1)
+                ]
+              ]
+            ]
         set gr (gr + tgr)
         if (gr = 0)[
           set groid -1
@@ -2514,8 +2295,6 @@ to females-reproduce-old
         ]
         ]
     ]
-  ]
-  ]
 
 end
 
@@ -2550,8 +2329,8 @@ end
 GRAPHICS-WINDOW
 665
 33
-823
-252
+1525
+294
 -1
 -1
 6.0
@@ -2565,9 +2344,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-24
+141
 0
-34
+41
 0
 0
 1
@@ -3077,7 +2856,7 @@ CHOOSER
 cwd_region
 cwd_region
 "Boone County" "Callaway County" "Carroll County" "Chariton County" "Cole County" "Cooper County" "Franklin County" "Gasconade County" "Knox County" "Linn County" "Livingston County" "Miller County" "Moniteau County" "Morgan County" "Osage County" "Putnam County" "Randolph County" "Schuyler County" "Scotland County" "Shelby County" "St. Charles County" "St. Louis County" "Sullivan County" "Warren County" "Washington County" "MaconLinnCoreArea" "Seven County"
-13
+26
 
 TEXTBOX
 161

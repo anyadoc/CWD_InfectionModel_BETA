@@ -339,9 +339,14 @@ to go
     ask male-leaders [ set gr 0 ]
     ]
   if (d = 5) [
-    yearlings-disperse
 
-    females-reproduce-group
+    ask deers with [ aim = 13 and gr = -1 ][
+      yearlings-disperse
+    ]
+
+    ask deers with [ sex = 2 and aim > 12 and cwdpr < cwdc][ ;breeding females
+      females-reproduce-group
+    ]
 
   ]
 
@@ -1752,7 +1757,10 @@ to deer-die
       ]
 
     [ if rn < fynhm [
-        ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][die]
+        ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][
+          review-group-dynamics
+          die
+        ]
         ifelse (gl > 0)[ new-group-leader ][ if (gr = -1) [review-group-dynamics] ]
         die
        ]
@@ -1774,7 +1782,10 @@ to deer-die
         [ let lmort 0.8
           if aim < 240 [ set lmort precision (fanhm - oldf) 3 ]
           if rn < lmort [
-            ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][die]
+            ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][
+              review-group-dynamics
+              die
+            ]
             ifelse (gl > 0)[ new-group-leader ][ if (gr = -1)[review-group-dynamics] ]
             die
           ]
@@ -2186,13 +2197,11 @@ to review-group-dynamics                                             ; turtle pr
 end
 
 to yearlings-disperse
-  if d != 5 [stop]
+  ;if d != 5 [stop]
 
-  ask deers with [ aim = 13 and gr = -1 ][
+  let disp-prob random-float 1
 
-    let disp-prob random-float 1
-
-    ifelse sex = 1
+  ifelse sex = 1
     [ review-group-dynamics ;leave maternal group
       set gr -2 set groid -1
       if disp-prob < yearling-male-dispersal-rate [
@@ -2205,123 +2214,118 @@ to yearlings-disperse
          deer-fdisperse
       ]]
 
-  ]
-
 end
 
 to females-reproduce-group
 
-let breeding-females deers with [ sex = 2 and aim > 12 and cwdpr < cwdc] ;22Nov17 added cwdpr < cwdc
-    ask breeding-females[
-      if (aim = 13) [
-        if (random 100 < 21)[
-          set grfis 0
-          set tgroid groid
-          ifelse (tgroid >= 0)
-          [ ask deer tgroid [
-              ifelse (gr > 4)
-              [ set gr (gr - 1)
-                set tgroid -1
-                set tgr -2
-                set grfis 1
-              ]
-              [ set gr (gr + 1)
-                set tgroid groid
-                set tgr -1
-              ]
-              ]
-          if (grfis = 1)[
-            set groid -1
-            set gr -2
-          ]
-          ]
-          [ set tgroid -1
-            set tgr -2
-          ]
-          deer-reproduce
-          ]
-        ]
-      if (aim > 24)[
-        if (random 100 < 81)[
-          set grfis 0
-          set tgroid groid
-          ifelse (gl > 0)
-          [set gr (gr + 2)
-            if (gr > 6)[
-              let xgr gr - 6
-              let group-members deers in-radius-nowrap 3 with [ groid = tgroid and sex = 2 and aim > 13 and gl = 0 ]
-              ifelse (count group-members >= xgr)
-              [ set ngr xgr ]
-              [ set ngr count group-members ]
-              ask n-of ngr group-members [
-                new-group-formation
-                ]
-              ]
-            set tgr -1
-            ]
-          [ ifelse (groid < 0 or not is-turtle? deer groid)
-            [ ifelse (aim > 36 and n_leaders_lost > 0)
-              [set gl 1
-                set gr 2
-                set groid who
-                set tgroid who
-                set tgr -1
-                set n_leaders_lost (n_leaders_lost - 1)
-                ]
-              [ set tgroid -1
-                set tgr -2
-                ]
-              ]
-            [ ask deer tgroid [
-                ifelse (gr > 4)
-                [ set gr (gr - 1)
-                  set tgroid -1
-                  set tgr -2
-                  set grfis 1
-                ]
-                [ set gr (gr + 2)
-                  set tgroid groid
-                  set tgr -1
-                ]
-            ]
-            if (grfis = 1)[
-              set groid -1
-              set gr -2
-              ]
-            ]
-            ]
-          deer-reproduce
-          ]
-      ]
-      ;---------------------------Join-group-------------------------------------------------------------------------
-      if (gl = 1 and gr < 4)[
-        set tgroid groid
-        let solitary-adult-females-here deers in-radius-nowrap 1.5 with [ sex = 2 and gr = -2 and aim >= 13 and cwdpr < cwdc ]
-        set sd count solitary-adult-females-here
-        set tgr 0
-        if (sd > 0)[
-          ifelse (sd > 2)
-          [ set sd1 2 ]
-          [ set sd1 1 ]
-          ask n-of sd1 solitary-adult-females-here [
-            set tmomid who
-            set groid tgroid
-            set gr -1
-            set tgr (tgr + 1)
-            ask deers in-radius-nowrap 1.5 with [ momid = tmomid and aim = 1 ][
-              set groid tgroid
-              set gr -1
-              set tgr (tgr + 1)
-                ]
-              ]
-            ]
-        set gr (gr + tgr)
-        if (gr = 0)[
-          set groid -1
-          set gr -2
-        ]
-        ]
-    ]
+   if (aim = 13) [
+     if (random 100 < 21)[
+       set grfis 0
+       set tgroid groid
+       ifelse (tgroid >= 0)
+       [ ask deer tgroid [
+           ifelse (gr > 4)
+           [ set gr (gr - 1)
+             set tgroid -1
+             set tgr -2
+             set grfis 1
+           ]
+           [ set gr (gr + 1)
+             set tgroid groid
+             set tgr -1
+           ]
+           ]
+       if (grfis = 1)[
+         set groid -1
+         set gr -2
+       ]
+       ]
+       [ set tgroid -1
+         set tgr -2
+       ]
+       deer-reproduce
+       ]
+     ]
+   if (aim > 24)[
+     if (random 100 < 81)[
+       set grfis 0
+       set tgroid groid
+       ifelse (gl > 0)
+       [set gr (gr + 2)
+         if (gr > 6)[
+           let xgr gr - 6
+           let group-members deers in-radius-nowrap 3 with [ groid = tgroid and sex = 2 and aim > 13 and gl = 0 ]
+           ifelse (count group-members >= xgr)
+           [ set ngr xgr ]
+           [ set ngr count group-members ]
+           ask n-of ngr group-members [
+             new-group-formation
+             ]
+           ]
+         set tgr -1
+         ]
+       [ ifelse (groid < 0 or not is-turtle? deer groid)
+         [ ifelse (aim > 36 and n_leaders_lost > 0)
+           [set gl 1
+             set gr 2
+             set groid who
+             set tgroid who
+             set tgr -1
+             set n_leaders_lost (n_leaders_lost - 1)
+             ]
+           [ set tgroid -1
+             set tgr -2
+             ]
+           ]
+         [ ask deer tgroid [
+             ifelse (gr > 4)
+             [ set gr (gr - 1)
+               set tgroid -1
+               set tgr -2
+               set grfis 1
+             ]
+             [ set gr (gr + 2)
+               set tgroid groid
+               set tgr -1
+             ]
+         ]
+         if (grfis = 1)[
+           set groid -1
+           set gr -2
+           ]
+         ]
+         ]
+       deer-reproduce
+       ]
+   ]
+   ;---------------------------Join-group-------------------------------------------------------------------------
+   if (gl = 1 and gr < 4)[
+     set tgroid groid
+     let solitary-adult-females-here deers in-radius-nowrap 1.5 with [ sex = 2 and gr = -2 and aim >= 13 and cwdpr < cwdc ]
+     set sd count solitary-adult-females-here
+     set tgr 0
+     if (sd > 0)[
+       ifelse (sd > 2)
+       [ set sd1 2 ]
+       [ set sd1 1 ]
+       ask n-of sd1 solitary-adult-females-here [
+         set tmomid who
+         set groid tgroid
+         set gr -1
+         set tgr (tgr + 1)
+         ask deers in-radius-nowrap 1.5 with [ momid = tmomid and aim = 1 ][
+           set groid tgroid
+           set gr -1
+           set tgr (tgr + 1)
+             ]
+           ]
+         ]
+     set gr (gr + tgr)
+     if (gr = 0)[
+       set groid -1
+       set gr -2
+     ]
+     ]
 
 end
 

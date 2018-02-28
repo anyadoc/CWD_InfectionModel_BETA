@@ -646,68 +646,57 @@ to cwd-progression
   if ((cwdpr > cwdi) and (cwdpr < cwdc)) [                      ; infectious phase
     ifelse (sex = 1)                                            ; infectious male deer
     [ ifelse (aim < 13)                                         ; infectious male fawn
-      [ set twho who
-        set tgroid groid
-        set ttmomid momid
-        set ttaim aim
-        if (d <= 4)[                                            ; male fawns of age 9 to 12 months
-          let mom-deer deers with [ who = ttmomid and cwd = 0 ]
-          if any? mom-deer [                                    ; if mom is alive and uninfected
-            ask mom-deer [
-              if (random-float 1 < (0.06 + random-float 0.08))[ ; probability of infection is 0.06-0.13
-                set cwd 1
-                ]
-              ]
+      [ ;set twho who
+        let lgroid groid
+        let lmom momid
+        ;set ttmomid momid
+        ;set ttaim aim
+        if (d <= 4)[
+
+          ask deers in-radius-nowrap 3 with [ who = lmom and cwd = 0 ][ ; uninfected mom
+            if (random-float 1 < (0.06 + random-float 0.08))[ ; probability of infection is 0.06-0.13
+              set cwd 1
             ]
-          let full-siblings deers with [ momid = ttmomid and aim < 13 and cwd = 0 ]
-          if any? full-siblings [                               ; if any full-siblings (same cohort) alive and uninfected
-            ask full-siblings [
-              ifelse (sex = 2)
-              [ if (random-float 1 < (0.06 + random-float 0.08))[  ; female full sibling- probability of infection 0.06-0.13
-                set cwd 1
-                ]
-              ]
-              [ if (random-float 1 < (0.13 + random-float 0.14))[  ; male full sibling- probability of infection 0.13-0.26
-                set cwd 1
-                ]
-                ]
-              ]
+          ]
+
+          ask deers in-radius-nowrap 3 with [ momid = lmom and aim < 13 and cwd = 0 ][ ; full siblings in cohort alive and uninfected
+            ifelse (sex = 2)
+            [ if (random-float 1 < (0.06 + random-float 0.08))[  ; female full sibling- probability of infection 0.06-0.13
+              set cwd 1]]
+            [ if (random-float 1 < (0.13 + random-float 0.14))[  ; male full sibling- probability of infection 0.13-0.26
+              set cwd 1]]
+           ]
+
+          if (groid >= 0)[                                         ; if the infected deer is a group member
+
+            ask deers in-radius-nowrap 3 with [ groid = lgroid and who != lmom and cwd = 0 ][  ; uninfected group members other than mom
+
+              ifelse (momid = lmom)
+              [ if (sex = 2 and aim > 20) [                        ; female half-siblings in group
+                  if (random-float 1 < 0.07) [ set cwd 1 ]]]
+;              [ if (sex = 2 and aim > 20 and aim < 25) [         ; 1/2 sibling female yearlings in group
+;                  if (random-float 1 < 0.07)[                      ; probability of infection 0-0.06
+;                    set cwd 1
+;                  ]
+;                ]
+;                  if (sex = 2 and aim > 24) [                      ; adult female 1/2 sibling in group
+;                    if (random-float 1 < 0.07)[                    ; probability of infection 0-0.06
+;                      set cwd 1
+;                      ]
+;                    ]
+;               ]
+
+               [ ifelse (sex = 2 and aim > 20)                      ; female yearlings and adults in group, except mom and 1/2 siblings
+                 [ if (random-float 1 < 0.07)[ set cwd 1 ]]                      ; probability of infection 0-0.06
+                 [ if (aim < 13) [
+                      ifelse (sex = 2)
+                      [ if (random-float 1 < (0.06 + random-float 0.08))[ set cwd 1 ]]    ;female fawns other than full siblings, probability of infection 0.06-0.13
+                      [ if (random-float 1 < (0.13 + random-float 0.14))[ set cwd 1 ]]   ;male fawns other than full siblings, probability of infection 0.13-0.26
+                   ]
+                 ]
+               ]
             ]
-          if (tgroid >= 0)[                                         ; if the infected deer is a group member
-            let group-mem deers with [ groid = tgroid and who != ttmomid and cwd = 0 ]  ; uninfected group members other than mom
-            if any? group-mem [
-              ask group-mem [
-                ifelse (momid = ttmomid)                           ; siblings in group
-                [ if (sex = 2 and aim > 20 and aim < 25) [         ; 1/2 sibling female yearlings in group
-                  if (random-float 1 < 0.07)[                      ; probability of infection 0-0.06
-                    set cwd 1
-                    ]
-                  ]
-                  if (sex = 2 and aim > 24) [                      ; adult female 1/2 sibling in group
-                    if (random-float 1 < 0.07)[                    ; probability of infection 0-0.06
-                      set cwd 1
-                      ]
-                    ]
-                  ]
-                [ if (sex = 2 and aim > 20) [                      ; female yearlings and adults in group, except mom and 1/2 siblings
-                  if (random-float 1 < 0.07)[                      ; probability of infection 0-0.06
-                    set cwd 1
-                    ]
-                  ]
-                  if (aim < 13) [
-                    ifelse (sex = 2)
-                    [ if (random-float 1 < (0.06 + random-float 0.08))[    ;================================ female fawns other than full siblings, probability of infection 0.06-0.13
-                      set cwd 1
-                      ]
-                    ]
-                    [ if (random-float 1 < (0.13 + random-float 0.14))[    ;================================ male fawns other than full siblings, probability of infection 0.13-0.26
-                      set cwd 1
-                      ]
-                    ]
-                    ]
-                  ]
-                ]
-              ]
+         ]
 ;            let non-group-halfsib-neigh deers with [momid = ttmomid and sex = 2 and aim > 20 and aim < 25 and groid != tgroid and cwd = 0] in-radius 1.5   ;commented out 4Nov17
 ;            if any? non-group-halfsib-neigh [                             ; non-group yearling 1/2 sibling in the neighborhood
 ;              ask non-group-halfsib-neigh [
@@ -734,33 +723,27 @@ to cwd-progression
 ;                ]
 ;              ]
 ;            ]
-          ]
+;          ]
         if (d = 7)[                                                        ; male fawn 3 months old
-          let mom-deer deers with [ who = ttmomid and cwd = 0 ]              ; uninfected mom
-          if any? mom-deer [
-            ask mom-deer [
+          ask deers in-radius-nowrap 3 with [ who = lmom and cwd = 0 ] [             ; uninfected mom
               ;if (random-float 1 < (0.7 + random-float 0.2))[             ; probability of infection 1
               set cwd 1
               ;]
-              ]
-            ]
-          let fullsib deers with [momid = ttmomid and aim = 3 and cwd = 0]
-          if any? fullsib [
-            ask fullsib [
+          ]
+
+          ask deers in-radius-nowrap 3 with [momid = lmom and aim = 3 and cwd = 0][ ;full sibs in cohort
               ;if (random-float 1 < (0.4 + random-float 0.2))[             ; probability of infection 1
               set cwd 1
               ;]
-              ]
             ]
-          if (tgroid >= 0)[
-            let halfsib deers with [ momid = ttmomid and sex = 2 and aim = 15 and groid = tgroid and cwd = 0 ]
-            if any? halfsib [
-              ask halfsib [                                                 ; half siblings (yearlings) in group
+
+          if (lgroid >= 0)[ ;if in group
+            ask deers in-radius-nowrap 3 with [ momid = lmom and sex = 2 and aim = 15 and groid = lgroid and cwd = 0 ][
+                ; half siblings (f yearlings) in group
                 if (random-float 1 < (0.06 + random-float 0.08))[           ; probability of infection 0.06-0.13
                   set cwd 1
                   ]
-                ]
-              ]
+             ]
 ;            let halfsib-othergroup deers with [ momid = ttmomid and sex = 2 and aim = 15 and groid != tgroid and cwd = 0 ] in-radius 1.5
 ;            if any? halfsib-othergroup [
 ;              ask halfsib-othergroup [
@@ -770,56 +753,46 @@ to cwd-progression
 ;                ]
 ;              ]
             ]
-          ]
+        ]
+
         if (d > 7)[                                                         ; male fawn age 4 to 8 months
-          let mom-deer deers with [ who = ttmomid and cwd = 0 ]
-          if any? mom-deer [
-            ask mom-deer [                                                  ; to mom
-              if (d > 7 and d < 11)[
-                if (random-float 1 < (0.13 + random-float 0.14))[           ; probability of infection 0.13-0.26 (non-rut season)
-                  set cwd 1
-                  ]
-                ]
-              if (d > 10)[
-                if (random-float 1 < 0.07)[                                 ; probability of infection 0 - 0.07 (rut season)
-                  set cwd 1
-                  ]
-                ]
-              ]
+          ask deers in-radius-nowrap 3 with [ who = lmom and cwd = 0 ][                                              ; to mom
+            if (d > 7 and d < 11)[
+              if (random-float 1 < (0.13 + random-float 0.14))[ set cwd 1 ]          ; probability of infection 0.13-0.26 (non-rut season)
             ]
-          let fullsib deers with [ momid = ttmomid and aim < 13 and cwd = 0 ]
-          if any? fullsib [
-            ask fullsib [
-              ifelse (sex = 2)
-              [ if (d > 7 and d < 11) [
+            if (d > 10)[
+              if (random-float 1 < 0.07)[ set cwd 1 ]                                ; probability of infection 0 - 0.07 (rut season)
+            ]
+          ]
+
+          ask deers in-radius-nowrap 3 with [ momid = lmom and aim < 13 and cwd = 0 ][
+             ifelse (sex = 2)
+             [ if (d > 7 and d < 11) [
                 if (random-float 1 < (0.38 + random-float 0.27))[           ; female full sibling, probability of infection 0.38-0.64
                   set cwd 1
                 ]
-              ]
-              if (d > 10)[
+               ]
+               if (d > 10)[
                 if (random-float 1 < (0.06 + random-float 0.07))[           ; female full sibling, probability of infection 0.06-0.13
                   set cwd 1
                   ]
-                ]
-              ]
+                ]]
               [ if (d > 7 and d < 11)[
                 if (random-float 1 < (0.38 + random-float 0.27))[           ; prob of trans 0.38-0.64
                   set cwd 1
                 ]
-              ]
-              if (d > 10)[
-                if (random-float 1 < (0.13 + random-float 0.14))[           ; male full sibling, probability of infection 0.13-0.26
-                  set cwd 1
-                  ]
                 ]
-              ]
-              ]
-            ]
+                if (d > 10)[
+                  if (random-float 1 < (0.13 + random-float 0.14))[           ; male full sibling, probability of infection 0.13-0.26
+                    set cwd 1
+                    ]
+                  ]
+               ]
+          ]
+
           if (tgroid >= 0) [
-            let other-group-members deers with [ groid = tgroid and who != ttmomid and cwd = 0 ]
-            if any? other-group-members [
-              ask other-group-members [
-                ifelse (momid = ttmomid)
+            ask deers in-radius-nowrap 3 with [ groid = lgroid and who != lmom and cwd = 0 ][
+                ifelse (momid = lmom)
                 [ if (sex = 2 and aim > 15 and aim < 19) [                   ; 1/2 sibling female yearling in group non-rut period
                   if (random-float 1 < (0.06 + random-float 0.08))[         ; probability of infection 0.06-0.13
                     set cwd 1
@@ -842,7 +815,7 @@ to cwd-progression
                         ]
                       ]
                     ]
-                  ]
+                ]
                 [ if (sex = 2 and aim > 15 and aim < 19) [                 ; other female yearlings in group non-rut period
                   if (random-float 1 < (0.06 + random-float 0.08))[        ; probability of infection 0.06-0.13
                     set cwd 1
@@ -916,7 +889,6 @@ to cwd-progression
 ;                ]
 ;              ]
 ;            ]
-          ]
         ]
     [ if (d < 10)[                                                        ; cwd+ is yearling or adult MALE      http://community.deergear.com/the-hunt/bachelor-group-behavior/
       ifelse (mgroid < 0)

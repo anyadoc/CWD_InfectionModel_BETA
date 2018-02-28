@@ -123,6 +123,7 @@ globals
   ma-sr
   fa-sr
   far
+  d
 
   ;MOOvPOP( Agent-based model of deer population dynamics) generated deer population is used to initialize this model ('import-world'),
   ;hence global variables from MOOvPOP are also included.
@@ -264,6 +265,9 @@ to go
   if (ticks = 60) [
     stop
   ]
+
+  set d remainder ticks 12 + 1 ;month. Do calculation just once per iteration
+
   ;if (d = 1 or d = 7) [
     ;ask deers [ ht ]                                             ;v2.1 deer ht in setup
     ;export-interface (word "CWD landscape month " ticks ".png")
@@ -1607,24 +1611,23 @@ to finalize-home-patch
     ]
     ]
 end
+
 to new-group-formation
-  set tgroid groid
+  let lgroid groid
   set groid -1
-  set ttgroid who
-  set tgr 0
-  let my-fawns deers with [ momid = ttgroid and aim = 1 ]
-  if any? my-fawns [
-    ask my-fawns [
-      set gr -2
-      set groid -1
-      set tgr (tgr + 1)
-    ]
-    ]
   set gr -2
-  ask deer tgroid[
-    set gr (gr - (tgr + 1))
+  let lgr 0
+  ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim = 1 ][
+     set gr -2
+     set groid -1
+     set lgr (lgr + 1)
+   ]
+
+  ask deer lgroid[
+    set gr (gr - (lgr + 1))
     ]
 end
+
 to deer-die-CWD
   set tgroid groid
   if (sex = 2)[ set twho who ]
@@ -1988,10 +1991,11 @@ to hunting-mortality-fy-sr
 end
 to hunting-mortality-ma
   if (ml = 1)[
-    set tmgroid mgroid
-    let group-members deers with [ mgroid = tmgroid and ml = 0 ]
-    ask group-members [ set mgroid -1 ]
+    let lmgroid mgroid
+    ask deers in-radius-nowrap 3 with [ mgroid = lmgroid and ml = 0 ][
+      set mgroid -1
     ]
+  ]
   ifelse (random-float 1 < %adult-male-harvest-tested)
   [ if (cwd = 1) [
     set dcwdm (dcwdm + 1)
@@ -2329,9 +2333,9 @@ to females-reproduce-group
 
 end
 
-to-report d
-  report remainder ticks 12 + 1
-end
+;to-report d
+;  report remainder ticks 12 + 1
+;end
 to-report year
   report floor (ticks / 12) + 1
 end
@@ -2737,7 +2741,7 @@ MONITOR
 1608
 111
 Month
-d
+remainder ticks 12 + 1
 17
 1
 11

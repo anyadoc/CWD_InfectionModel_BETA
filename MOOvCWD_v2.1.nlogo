@@ -905,8 +905,8 @@ to cwd-progression
             ]
           ]
         ]
-      [ set tmgroid mgroid
-        ask deers with [ mgroid = tmgroid and cwd = 0] [                   ; susceptible male deer in bachelor group
+      [ let lmgroid mgroid
+        ask deers in-radius-nowrap 3 with [ mgroid = lmgroid and cwd = 0] [ ; susceptible male deer in bachelor group (should be nearby, right?)
           if (random-float 1 < (0.38 + random-float 0.21))[                ; probability of infection 0.38-0.58
             set cwd 1
             ]

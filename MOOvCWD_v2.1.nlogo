@@ -103,9 +103,9 @@ globals
   ttaim                                           ;same
   tnm                                             ;to transfer the nm value
   ter                                             ;mating area (more for young deers)
-  infm
+  ;infm
   inff
-  avmates
+  ;avmates
   tinff
   grfis                                           ;group fission 10Jun16
   ngr
@@ -424,86 +424,11 @@ to go
     set vals6 (list (test_area) (mf12hm-sr) (ff12hm-sr) (myhm-sr) (fyhm-sr) (mahm-sr) (fahm-sr) (phn-sr) (totcwdd-sr))
   ]
   if (d = 12) [
+
     ask deers [
-      if (aim < 10)[
-        ifelse (sex = 1)
-        [ if (random-float 1 < mf12hm)[
-          set tgroid groid
-          hunting-mortality-mf12
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < mf12hm-sr)[
-            set tgroid groid
-            hunting-mortality-mf12-sr
-            ]
-          ]
-        ]
-        [ if (random-float 1 < ff12hm)[
-          set tgroid groid
-          set twho who
-          hunting-mortality-ff12
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < ff12hm-sr)[
-            set tgroid groid
-            hunting-mortality-ff12-sr
-            ]
-          ]
-        ]
-        ]
-      if (aim = 20)[
-        ifelse (sex = 1)
-        [ if (random-float 1 < myhm)[
-          set tgroid groid
-          hunting-mortality-my
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < myhm-sr)[
-            set tgroid groid
-            hunting-mortality-my-sr
-            ]
-          ]
-        ]
-        [ if (random-float 1 < fyhm)[
-          set tgroid groid
-          set twho who
-          hunting-mortality-fy
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < fyhm-sr)[
-            set tgroid groid
-            hunting-mortality-fy-sr
-            ]
-          ]
-        ]
-        ]
-      if (aim > 30)[
-        ifelse (sex = 1)
-        [ if (random-float 1 < mahm)[
-          set tgroid groid
-          hunting-mortality-ma
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < mahm-sr)[
-            set tgroid groid
-            hunting-mortality-ma-sr
-            ]
-          ]
-        ]
-        [ if (random-float 1 < fahm)[
-          set tgroid groid
-          set twho who
-          hunting-mortality-fa
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < fahm-sr)[
-            set tgroid groid
-            hunting-mortality-fa-sr
-            ]
-          ]
-        ]
-        ]
+      hunting-mortality
       ]
+
     if (ticks >= 0) [
       set hcwd (dcwdm + dcwdmy + dcwdmf + dcwdf + dcwdfy + dcwdff)
       set tcwd (tcwdm + tcwdmy + tcwdmf + tcwdf + tcwdfy + tcwdff)
@@ -1552,8 +1477,9 @@ to new-group-formation
 end
 
 to deer-die-CWD
-  set tgroid groid
-  if (sex = 2)[ set twho who ]
+  let lgroid groid
+  let lwho who
+
   ;----------------------------------------------------------------- fawns upto 6 months
   ifelse (aim < 6.5)
   [ ifelse (sex = 1)
@@ -1595,12 +1521,9 @@ to deer-die-CWD
           ]
           die
         ]
-        [ let my-fawns deers with [ momid = twho and aim < 2.5 ]
-          if any? my-fawns [
-           ask my-fawns [
+        [ ask deers in-radius-nowrap 1.5 with [ momid = lwho and aim < 2.5 ][ ;my fawns
               set counter1 counter1 + 1
               die
-          ]
           ]
           ifelse (gl > 0)
           [ new-group-leader
@@ -1616,20 +1539,16 @@ to deer-die-CWD
       ;----------------------------------------------------------------------- male 25 to 240 and more than 240
       [ ifelse (sex = 1)
         [ if (ml = 1)[
-          set tmgroid mgroid
-          let bgroup-members deers with [ mgroid = tmgroid ]
-          ask bgroup-members [ set mgroid -1 ]
+          let lmgroid mgroid
+          ask deers in-radius-nowrap 3 with [mgroid = lmgroid] [ set mgroid -1 ]
           ]
           die
         ]
         ;--------------------------------------------------------------------- female 25 to 240
-        [ let my-fawns deers with [ momid = twho and aim < 2.5 ]
-          if any? my-fawns [
-           ask my-fawns [
-              set counter1 counter1 + 1
-              die
-              ]
-            ]
+        [ ask deers in-radius-nowrap 1.5 with [ momid = lwho and aim < 2.5 ][
+             set counter1 counter1 + 1
+             die
+          ]
           ifelse (gl > 0)
           [ new-group-leader
             ]
@@ -2066,41 +1985,58 @@ to deer-mating
     set nm (1 + random 3)
     set anm 0
   ]
-  set tnm nm
+  ;set tnm nm
   let female-deer-near-me deers in-radius-nowrap ter with [ sex = 2 and anm < nm and cwdpr < cwdc]   ;22Nov17
   let pmates (count female-deer-near-me)
   if (pmates > 0)[
-    ifelse (cwd = 1)
-    [ set infm 1 ]
-    [ set infm 0 ]
-    ifelse (pmates >= tnm)
-    [ set avmates tnm ]
-    [ set avmates pmates ]
-    ask n-of avmates female-deer-near-me [
-      ifelse (cwd = 1)
-      [ set inff 1
-        set tinff (tinff + 1)
-        ]
-      [ if (infm = 1)[
-        if (random-float 1 < 0.06)[;(0.2 + random-float 0.2))[     ;changed from 0.2 + random-float 0.2  to 0.41
-          set cwd 1
-          ]
-        ]
-        ]
-      set anm (anm + 1)
-    ]
-    if (tinff > 0)[
-      if (cwd = 0)[
-        repeat tinff [
-          if (random-float 1 < 0.41)[;(0.2 + random-float 0.2))[
-            set cwd 1
-          ]
-        ]
-      ]
-      set tinff 0
-    ]
+
+    let lcwd cwd
+    let avmates min list nm pmates ;available mates
     set anm avmates
+
+    let exposures 0
+
+    ask n-of avmates female-deer-near-me [
+      if (cwd = 1 and lcwd = 0)[
+        set exposures (exposures + 1) ; male is exposed once
+      ]
+      if (cwd = 0 and lcwd = 1)[ ; chance for female to be infected
+        ;(0.2 + random-float 0.2))[     ;changed from 0.2 + random-float 0.2  to 0.41
+        if (random-float 1 < 0.06)[ set cwd 1 ]
+      ]
+    ]
+
+    if cwd = 0 and exposures > 0 [
+      let cum-prob (1 - (1 - 0.41) ^ exposures ) ;cumulative prob of infection
+      if random-float 1 < cum-prob [ set cwd 1 ]
+    ]
   ]
+
+
+
+;  I think the following code is more accurate, but it's slow.
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  let actual-mates n-of avmates female-deer-near-me
+;    foreach [who] of actual-mates [ [mate] ->
+;
+;      if ([cwd] of deer mate = 0 and cwd = 1)[ ;male infected and female is not
+;        ask deer mate [
+;          ;(0.2 + random-float 0.2))[     ;changed from 0.2 + random-float 0.2  to 0.41
+;          if (random-float 1 < 0.06)[set cwd 1]
+;        ]
+;      ]
+;
+;      if ([cwd] of deer mate = 1 and cwd = 0)[ ;male not infected and female is
+;        if (random-float 1 < 0.41)[;(0.2 + random-float 0.2))[
+;            set cwd 1
+;        ]
+;      ]
+;      ;if infection status of m and f is the same, do nothing
+;
+;    ]
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 end
 
 to review-group-dynamics                                             ; turtle procedure: doe social group leader loses leadership status if no group members left
@@ -2251,6 +2187,88 @@ to females-reproduce-group
        set gr -2
      ]
      ]
+
+end
+
+to hunting-mortality
+  if (aim < 10)[
+    ifelse (sex = 1)
+    [ if (random-float 1 < mf12hm)[
+      set tgroid groid
+      hunting-mortality-mf12
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < mf12hm-sr)[
+        set tgroid groid
+        hunting-mortality-mf12-sr
+        ]
+      ]
+    ]
+    [ if (random-float 1 < ff12hm)[
+      set tgroid groid
+      set twho who
+      hunting-mortality-ff12
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < ff12hm-sr)[
+        set tgroid groid
+        hunting-mortality-ff12-sr
+        ]
+      ]
+    ]
+    ]
+  if (aim = 20)[
+    ifelse (sex = 1)
+    [ if (random-float 1 < myhm)[
+      set tgroid groid
+      hunting-mortality-my
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < myhm-sr)[
+        set tgroid groid
+        hunting-mortality-my-sr
+        ]
+      ]
+    ]
+    [ if (random-float 1 < fyhm)[
+      set tgroid groid
+      set twho who
+      hunting-mortality-fy
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < fyhm-sr)[
+        set tgroid groid
+        hunting-mortality-fy-sr
+        ]
+      ]
+    ]
+    ]
+  if (aim > 30)[
+    ifelse (sex = 1)
+    [ if (random-float 1 < mahm)[
+      set tgroid groid
+      hunting-mortality-ma
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < mahm-sr)[
+        set tgroid groid
+        hunting-mortality-ma-sr
+        ]
+      ]
+    ]
+    [ if (random-float 1 < fahm)[
+      set tgroid groid
+      set twho who
+      hunting-mortality-fa
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < fahm-sr)[
+        set tgroid groid
+        hunting-mortality-fa-sr
+        ]
+      ]
+    ]
+    ]
 
 end
 

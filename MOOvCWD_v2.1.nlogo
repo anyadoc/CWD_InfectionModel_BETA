@@ -546,18 +546,36 @@ to go
 ;      ;set plabel 0
 ;      ]
 ;    ]
+;  ask patches [
+;    if dh = -1 [stop]
+;    ;set plabel count deers-here with [cwd = 1]
+;    let cwds count deers-here with [cwd = 1]
+;    ifelse cwds = 0
+;    [ set pcolor scale-color green forest-percent 1 0 ]
+;    [ ifelse cwds < 4
+;      [set pcolor yellow ]
+;      [ifelse cwds < 7
+;        [ set pcolor orange ]
+;        [ set pcolor red ]
+;  ]]
+;  ]
+
   ask patches [
     if dh = -1 [stop]
-    ;set plabel count deers-here with [cwd = 1]
-    let cwds count deers-here with [cwd = 1]
-    ifelse cwds = 0
+    let pop count deers-here
+    let prev 0
+    if pop > 0 [set prev (count deers-here with [cwd = 1]) / pop]
+    ifelse prev > 0
+    [set pcolor scale-color red prev 1 0]
     [ set pcolor scale-color green forest-percent 1 0 ]
-    [ ifelse cwds < 4
-      [set pcolor yellow ]
-      [ifelse cwds < 7
-        [ set pcolor orange ]
-        [ set pcolor red ]
-  ]]
+;    ifelse prev = 0
+;    [ set pcolor scale-color green forest-percent 1 0 ]
+;    [ ifelse prev < 0.05
+;      [set pcolor yellow ]
+;      [ifelse prev < 0.1
+;        [ set pcolor orange ]
+;        [ set pcolor red ]
+;  ]]
   ]
 
 
@@ -849,9 +867,7 @@ to cwd-progression
       [ let lmom who
         let lgroid groid
         let lmymom momid
-        ; ISSUES HERE, IGNORING FOR NOW
-        let my-fawns close-deers with [ momid = lmom and cwd = 0 ]               ; all SUSCEPTIBLE offspring of the infected female deer
-        if any? my-fawns in-radius 1.5 [
+        ask close-deers with [ momid = lmom and cwd = 0 ][               ; all SUSCEPTIBLE offspring of the infected female deer
           if (aim = 3)[                                                      ; probability of infection fawns 3 months of age 0.77 to 1
             if (random-float 1 < (0.77 + random-float 0.24))[
               set cwd 1
@@ -937,7 +953,7 @@ to cwd-progression
                 ]
               ]
             ]
-          ]  ;;;ISSUES END HERE
+          ]
         if (d < 5 and d > 6)[                                                    ; except during the periparturient period
           ask close-deers with [ who = lmymom and cwd = 0 ][
             ifelse (groid >= 0 and groid = lgroid)                             ; susceptible mom in the same group as that of the infected female
@@ -990,12 +1006,10 @@ to cwd-progression
             let lgroid groid
             let lmymom momid
             let laim aim
-          ; ISSUES HERE ALSO - FIX LATER
-          let my-fawns close-deers with [ momid = lmom and cwd = 0 ]                      ; all SUSCEPTIBLE offspring of the infected yearling female
-          if any? my-fawns in-radius 1.5 [
-            if (aim = 3)[                                                             ; probability of infection fawns 3 mo
-              if (random-float 1 < (0.77 + random-float 0.24))[
-                set cwd 1
+            ask close-deers with [ momid = lmom and cwd = 0 ][                      ; all SUSCEPTIBLE offspring of the infected yearling female
+              if (aim = 3)[                                                             ; probability of infection fawns 3 mo
+                if (random-float 1 < (0.77 + random-float 0.24))[
+                  set cwd 1
               ]
               ]
             if (aim <= 2)[
@@ -1039,7 +1053,7 @@ to cwd-progression
                   ]
                 ]
               ]
-            ] ;ISSUES END HERE
+            ]
           if (d < 5 and d > 6)[
             ask close-deers with [ who = lmymom and cwd = 0 ][
                 ifelse (groid >= 0 and groid = lgroid)                                ; susceptible mom in the same group as that of the infected yearling
@@ -2083,7 +2097,7 @@ to females-reproduce-group
      if (random 100 < 21)[
        set grfis 0
        set tgroid groid
-       ifelse (tgroid >= 0)
+       ifelse (tgroid >= 0 and is-turtle? deer tgroid)
        [ ask deer tgroid [
            ifelse (gr > 4)
            [ set gr (gr - 1)

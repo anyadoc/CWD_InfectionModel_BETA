@@ -200,7 +200,7 @@ to setup-landscape
   if (cwd_region = "Callaway County")[import-world "PostHarvestPopulationCallawayCounty_v2.csv"]
   if (cwd_region = "Carroll County")[import-world "PostHarvestPopulationCarrollCounty_v2.csv"]
   if (cwd_region = "Chariton County")[import-world "PostHarvestPopulationCharitonCounty_v2.csv"]
-  if (cwd_region = "Cole County")[import-world "PostHarvestPopulationColeCounty_v2_v2.csv"]
+  if (cwd_region = "Cole County")[import-world "PostHarvestPopulationColeCounty_v2.csv"]
   if (cwd_region = "Cooper County")[import-world "PostHarvestPopulationCooperCounty_v2.csv"]
   ;if (cwd_region = "Crawford County")[import-world "PostHarvestPopulationCrawfordCounty_v2.csv"]
   if (cwd_region = "Franklin County")[import-world "PostHarvestPopulationFranklinCounty_v2.csv"]
@@ -1078,92 +1078,94 @@ to cwd-progression
         set ttaim aim
         let my-fawns deers with [ momid = tmomid and cwd = 0 ]               ; all SUSCEPTIBLE offspring of the infected female deer
         if any? my-fawns in-radius 1.5 [
-          if (aim = 3)[                                                      ; probability of infection fawns 3 months of age 0.77 to 1
-            if (random-float 1 < (0.77 + random-float 0.24))[
-              set cwd 1
-              ]
-            ]
-          if (aim < 3)[
-            if (random-float 1 < (0.77 + random-float 0.24))[                 ; probability of infection fawns 1,2 months of age: 0.77 to 1
-              set cwd 1
-            ]
-          ]
-          if (aim > 3 and aim < 7) [                                          ; fawns 4 ,5, 6 months old
-            if (sex = 1)[                                                     ; male fawns 4-5 months old
-              if (random-float 1 < (0.13 + random-float 0.14))[               ; probability of infection 0.13-0.26
-                set cwd 1
-              ]
-            ]
-            if (sex = 2)[                                                      ; female fawns 4, 5,6 months old
-              if (random-float 1 < (0.26 + random-float 0.13))[                ; probability of infection 0.26-0.38
-                set cwd 1
-              ]
-            ]
-          ]
-          if (aim > 6 and aim < 9)[                                            ; fawns 7, 8 months old (during the rutting period)
-            if (sex = 1)[
-              if (random-float 1 < 0.07)[
-                set cwd 1
-              ]
-            ]
-            if (sex = 2)[
-              if (random-float 1 < (0.06 + random-float 0.08))[                 ; probability of infection 0.06-0.13
+          ask my-fawns in-radius 1.5 [                                      ;1Mar18 bug detected by Ken
+            if (aim = 3)[                                                      ; probability of infection fawns 3 months of age 0.77 to 1
+              if (random-float 1 < (0.77 + random-float 0.24))[
                 set cwd 1
                 ]
               ]
-          ]
-          if (aim > 8 and aim < 13)[                                            ; fawns 9,10,11,12 months old
-            if (sex = 1) [
-              if (random-float 1 < (0.06 + random-float 0.08))[                 ; probability of infection to male fawns 0.06-0.13
+            if (aim < 3)[
+              if (random-float 1 < (0.77 + random-float 0.24))[                 ; probability of infection fawns 1,2 months of age: 0.77 to 1
                 set cwd 1
                 ]
               ]
-            if (sex = 2)[
-              if (random-float 1 < (0.13 + random-float 0.14))[                  ; probability of infection to female fawns 0.13-0.26
-                set cwd 1
-              ]
-            ]
-          ]
-          if (aim > 12 and aim < 25 and sex = 2)[                                ; only FEMALE yearlings
-            ifelse (tgroid >= 0 and groid = tgroid)                              ; infected female is a group member, and her yearling daughter is in the same group
-            [ if (d = 11 or d = 12)[                                             ; rut
-              if (random-float 1 < .07) [
-                set cwd 1
-              ]
-            ]
-            if (d < 11 )[
-              if (random-float 1 < (0.13 + random-float 0.14))[                   ; probability of infection 0.13-0.26
-                set cwd 1
-                ]
-              ]
-            ]
-            [ if (random-float 1 < 0.14)[                                         ; non-group yearling daughter in the neighborhood probability of infection 0 to 0.13
-              set cwd 1
-              ]
-            ]
-          ]
-          if (d < 5 and d > 6)[                                                   ; except during the peri-parturient period
-            if (tgroid >= 0)[
-              if (aim > 24 and sex = 2 and groid = tgroid)[                       ; adult female offspring who are group members
-                if (random-float 1 < 0.14)[                                       ; probability of infection 0-0.13
+            if (aim > 3 and aim < 7) [                                          ; fawns 4 ,5, 6 months old
+              if (sex = 1)[                                                     ; male fawns 4-5 months old
+                if (random-float 1 < (0.13 + random-float 0.14))[               ; probability of infection 0.13-0.26
                   set cwd 1
                   ]
                 ]
-              if (aim > 24 and sex = 2 and groid != tgroid)[                      ; infected mom is a group member, but the adult offspring is not
-                if (random-float 1 < 0.07)[                                       ; probability of infection 0-0.06
+              if (sex = 2)[                                                      ; female fawns 4, 5,6 months old
+                if (random-float 1 < (0.26 + random-float 0.13))[                ; probability of infection 0.26-0.38
                   set cwd 1
                   ]
                 ]
               ]
-            if (tgroid = -1)[                                                    ; infected mom is solitary
-              if (aim > 24 and sex = 2)[                                         ; susceptible adult offspring is in the neighborhood
-                if (random-float 1 < 0.07 )[                                     ; probability of infection 0-0.06
+            if (aim > 6 and aim < 9)[                                            ; fawns 7, 8 months old (during the rutting period)
+              if (sex = 1)[
+                if (random-float 1 < 0.07)[
+                  set cwd 1
+                  ]
+                ]
+              if (sex = 2)[
+                if (random-float 1 < (0.06 + random-float 0.08))[                 ; probability of infection 0.06-0.13
                   set cwd 1
                   ]
                 ]
               ]
+            if (aim > 8 and aim < 13)[                                            ; fawns 9,10,11,12 months old
+              if (sex = 1) [
+                if (random-float 1 < (0.06 + random-float 0.08))[                 ; probability of infection to male fawns 0.06-0.13
+                  set cwd 1
+                  ]
+                ]
+              if (sex = 2)[
+                if (random-float 1 < (0.13 + random-float 0.14))[                  ; probability of infection to female fawns 0.13-0.26
+                  set cwd 1
+                  ]
+                ]
+              ]
+            if (aim > 12 and aim < 25 and sex = 2)[                                ; only FEMALE yearlings
+              ifelse (tgroid >= 0 and groid = tgroid)                              ; infected female is a group member, and her yearling daughter is in the same group
+              [ if (d = 11 or d = 12)[                                             ; rut
+                if (random-float 1 < 0.07) [
+                  set cwd 1
+                  ]
+                ]
+                if (d < 11 )[
+                  if (random-float 1 < (0.13 + random-float 0.14))[                   ; probability of infection 0.13-0.26
+                    set cwd 1
+                    ]
+                  ]
+                ]
+              [ if (random-float 1 < 0.14)[                                         ; non-group yearling daughter in the neighborhood probability of infection 0 to 0.13
+                set cwd 1
+                ]
+                ]
+              ]
+            if (d < 5 and d > 6)[                                                   ; except during the peri-parturient period
+              if (tgroid >= 0)[
+                if (aim > 24 and sex = 2 and groid = tgroid)[                       ; adult female offspring who are group members
+                  if (random-float 1 < 0.14)[                                       ; probability of infection 0-0.13
+                    set cwd 1
+                    ]
+                  ]
+                if (aim > 24 and sex = 2 and groid != tgroid)[                      ; infected mom is a group member, but the adult offspring is not
+                  if (random-float 1 < 0.07)[                                       ; probability of infection 0-0.06
+                    set cwd 1
+                    ]
+                  ]
+                ]
+              if (tgroid = -1)[                                                    ; infected mom is solitary
+                if (aim > 24 and sex = 2)[                                         ; susceptible adult offspring is in the neighborhood
+                  if (random-float 1 < 0.07 )[                                     ; probability of infection 0-0.06
+                    set cwd 1
+                    ]
+                  ]
+                ]
+              ]
             ]
-          ]
+          ]                                                                       ;1Mar18 Close bracket- bug detected by Ken
         if (d < 5 and d > 6)[                                                    ; except during the periparturient period
           let my-mom deers with [ who = ttmomid and cwd = 0 ]
           if any? my-mom in-radius 1.5[
@@ -1227,52 +1229,54 @@ to cwd-progression
           set ttaim aim
           let my-fawns deers with [ momid = tmomid and cwd = 0 ]                      ; all SUSCEPTIBLE offspring of the infected yearling female
           if any? my-fawns in-radius 1.5 [
-            if (aim = 3)[                                                             ; probability of infection fawns 3 mo
-              if (random-float 1 < (0.77 + random-float 0.24))[
-                set cwd 1
-              ]
-              ]
-            if (aim <= 2)[
-              if (random-float 1 < (0.77 + random-float 0.24))[                       ; probability of infection fawns 1,2 months of age: 0.77 to 1
-                set cwd 1
-                ]
-              ]
-            if (aim > 3 and aim < 7) [                                                ; fawns 4,5,6 months old (non rut)
-              if (sex = 1)[                                                           ; male fawns 4-6 months old
-                if (random-float 1 < (0.13 + random-float 0.14))[                     ; probability of infection 0.13-0.26
-                  set cwd 1
-                  ]
-              ]
-              if (sex = 2)[                                                           ; female fawns 4-6 months old
-                if (random-float 1 < (0.26 + random-float 0.13))[                     ; probability of infection 0.26 -0.38
+            ask my-fawns in-radius 1.5 [                                             ;1Mar18 bug setected by Ken
+              if (aim = 3)[                                                             ; probability of infection fawns 3 mo
+                if (random-float 1 < (0.77 + random-float 0.24))[
                   set cwd 1
                   ]
                 ]
-              ]
-            if (aim > 6 and aim < 9)[                                                 ; fawns 7-8 months old (during the rutting period)
-              if (sex = 1)[
-                if (random-float 1 < 0.07)[
-                  set cwd 1
-                ]
-              ]
-              if (sex = 2)[
-                if (random-float 1 < (0.06 + random-float 0.08))[                    ; probability of infection 0.06-0.13
+              if (aim <= 2)[
+                if (random-float 1 < (0.77 + random-float 0.24))[                       ; probability of infection fawns 1,2 months of age: 0.77 to 1
                   set cwd 1
                   ]
                 ]
-            ]
-            if (aim > 8 and aim < 13)[                                               ; fawns 8,9,10,11,12 months old
-              if (sex = 1) [
-                if (random-float 1 < (0.06 + random-float 0.08))[                    ; probability of infection to male fawns 0.06-0.13
-                  set cwd 1
+              if (aim > 3 and aim < 7) [                                                ; fawns 4,5,6 months old (non rut)
+                if (sex = 1)[                                                           ; male fawns 4-6 months old
+                  if (random-float 1 < (0.13 + random-float 0.14))[                     ; probability of infection 0.13-0.26
+                    set cwd 1
+                    ]
+                  ]
+                if (sex = 2)[                                                           ; female fawns 4-6 months old
+                  if (random-float 1 < (0.26 + random-float 0.13))[                     ; probability of infection 0.26 -0.38
+                    set cwd 1
+                    ]
                   ]
                 ]
-              if (sex = 2)[
-                if (random-float 1 < (0.13 + random-float 0.14))[                    ; probability of infection to female fawns 0.13-0.26
-                  set cwd 1
+              if (aim > 6 and aim < 9)[                                                 ; fawns 7-8 months old (during the rutting period)
+                if (sex = 1)[
+                  if (random-float 1 < 0.07)[
+                    set cwd 1
+                    ]
+                  ]
+                if (sex = 2)[
+                  if (random-float 1 < (0.06 + random-float 0.08))[                    ; probability of infection 0.06-0.13
+                    set cwd 1
+                    ]
                   ]
                 ]
-              ]
+              if (aim > 8 and aim < 13)[                                               ; fawns 8,9,10,11,12 months old
+                if (sex = 1) [
+                  if (random-float 1 < (0.06 + random-float 0.08))[                    ; probability of infection to male fawns 0.06-0.13
+                    set cwd 1
+                    ]
+                  ]
+                if (sex = 2)[
+                  if (random-float 1 < (0.13 + random-float 0.14))[                    ; probability of infection to female fawns 0.13-0.26
+                    set cwd 1
+                    ]
+                  ]
+                ]
+              ]                                                                       ;closing bracket 1Mar18 bug detected by Ken
             ]
           if (d < 5 and d > 6)[
             let my-mom deers with [ who = ttmomid and cwd = 0 ]
@@ -2676,13 +2680,13 @@ to-report fa
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-665
-33
-1522
-293
+700
+75
+1008
+588
 -1
 -1
-6.0
+12.0
 1
 10
 1
@@ -2693,7 +2697,7 @@ GRAPHICS-WINDOW
 1
 1
 0
-141
+24
 0
 41
 0
@@ -2720,10 +2724,10 @@ NIL
 1
 
 MONITOR
-1611
-112
-1681
-157
+192
+628
+262
+673
 total deer
 count deers
 17
@@ -2731,10 +2735,10 @@ count deers
 11
 
 MONITOR
-1610
-14
-1682
-59
+191
+530
+263
+575
 male deer
 count deers with [sex = 1]
 17
@@ -2742,10 +2746,10 @@ count deers with [sex = 1]
 11
 
 MONITOR
-1611
-63
-1681
-108
+192
+579
+262
+624
 female deer
 count deers with [sex = 2]
 17
@@ -2950,10 +2954,10 @@ NIL
 1
 
 PLOT
-1702
-10
-1875
-156
+16
+533
+176
+667
 deer population
 months
 deer
@@ -3028,10 +3032,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-1556
-458
-1692
-503
+504
+748
+640
+793
 CWD detection probability
 pdcwd
 0
@@ -3039,10 +3043,10 @@ pdcwd
 11
 
 MONITOR
-1549
-17
-1606
-62
+698
+14
+755
+59
 Year
 year
 17
@@ -3050,10 +3054,10 @@ year
 11
 
 MONITOR
-1551
-66
-1608
-111
+762
+15
+819
+60
 Month
 d
 17
@@ -3061,10 +3065,10 @@ d
 11
 
 PLOT
-1705
-303
-1881
-445
+190
+679
+350
+799
 Doe group size
 NIL
 NIL
@@ -3079,10 +3083,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [gr + 1] of deers with [gl = 1]"
 
 PLOT
-1703
-160
-1878
-295
+18
+677
+178
+797
 Bachelor group size
 NIL
 NIL
@@ -3097,10 +3101,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [gr] of deers with [ml > 0]"
 
 MONITOR
-1555
-308
-1689
-353
+378
+699
+496
+744
 CWD infected deer
 count deers with [cwd = 1]
 17
@@ -3205,7 +3209,7 @@ CHOOSER
 cwd_region
 cwd_region
 "Boone County" "Callaway County" "Carroll County" "Chariton County" "Cole County" "Cooper County" "Franklin County" "Gasconade County" "Knox County" "Linn County" "Livingston County" "Miller County" "Moniteau County" "Morgan County" "Osage County" "Putnam County" "Randolph County" "Schuyler County" "Scotland County" "Shelby County" "St. Charles County" "St. Louis County" "Sullivan County" "Warren County" "Washington County" "MaconLinnCoreArea" "Seven County"
-26
+0
 
 TEXTBOX
 161
@@ -3308,10 +3312,10 @@ Female adults
 1
 
 MONITOR
-1556
-357
-1688
-402
+379
+748
+495
+793
 CWD true prevalence
 precision (count deers with [cwd = 1] / count deers) 3
 17
@@ -3319,10 +3323,10 @@ precision (count deers with [cwd = 1] / count deers) 3
 11
 
 MONITOR
-1555
-407
-1689
-452
+506
+700
+637
+745
 CWD area (square miles)
 cwd_area
 17
@@ -3330,10 +3334,10 @@ cwd_area
 11
 
 PLOT
-1524
-161
-1701
-302
+419
+550
+596
+691
 CWD prevalence
 Months
 True_prevalence
@@ -3508,6 +3512,16 @@ TEXTBOX
 627
 385
 -------------------------------------------------------------------------------------
+20
+0.0
+1
+
+TEXTBOX
+46
+506
+658
+547
+----------------------------------------------------------------------------------
 20
 0.0
 1

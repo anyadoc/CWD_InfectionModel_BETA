@@ -74,18 +74,26 @@ globals
   tcwdf-sr                                       ;counter- CWD infected female adults in the sample
   tcwdfy-sr                                      ;counter- CWD infected female yearlings in the sample
   tcwdff-sr
-  tfamh-sr                                       ;counter-fawn male deer hunted
-  tymh-sr                                        ;counter-yearling male deer hunted
-  tamh-sr                                        ;counter-adult male deer hunted
-  tfafh-sr                                       ;counter-fawn female deer hunted
-  tyfh-sr                                        ;counter-yearling female deer hunted
-  tafh-sr                                        ;counter-adult female deer hunted
-  tfmt-sr                                        ;counter-fawn male deer tested
-  tymt-sr                                        ;counter-yearling male deer tested
-  tamt-sr                                        ;counter-adult male deer tested
-  tfft-sr                                        ;counter-fawn female deer tested
-  tyft-sr                                        ;counter-yearling female deer tested
-  taft-sr
+  tfamh-sr                                       ;counter-fawn male deer hunted in the subregion
+  tymh-sr                                        ;counter-yearling male deer hunted in the subregion
+  tamh-sr                                        ;counter-adult male deer hunted in the subregion
+  tfafh-sr                                       ;counter-fawn female deer hunted in the subregion
+  tyfh-sr                                        ;counter-yearling female deer hunted in the subregion
+  tafh-sr                                        ;counter-adult female deer hunted in the subregion
+  ;##11Mar18
+  tfamc-sr                                       ;counter-fawn male deer culled in the subregion
+  tymc-sr                                        ;counter-yearling male deer culled in the subregion
+  tamc-sr                                        ;counter-adult male deer culled in the subregion
+  tfafc-sr                                       ;counter-fawn female deer culled in the subregion
+  tyfc-sr                                        ;counter-yearling female deer culled in the subregion
+  tafc-sr                                        ;counter-adult female deer culled in the subregion
+  ;
+  tfmt-sr                                        ;counter-fawn male deer harvested in the subregion and tested
+  tymt-sr                                        ;counter-yearling male deer harvested in the subregion andtested
+  tamt-sr                                        ;counter-adult male deer harvested in the subregion and tested
+  tfft-sr                                        ;counter-fawn female deer harvested in the subregion and tested
+  tyft-sr                                        ;counter-yearling female deer harvested in the subregion and tested
+  taft-sr                                        ;counter-adult female deer harvested in the subregion and tested
   hcwd
   tcwd
   totcwdd
@@ -189,15 +197,18 @@ to setup
     set cwdc 15 + random 4
   ]
   ;set yearling-male-dispersal-rate 0.46
-  file-open (word "cwdinfdy" cwd_region ".csv")
-  file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev"
+  file-open (word "cwdinfdy" cwd_region ".csv")                       ;28Feb18 Addition version 2.1.1
+  file-print "seed-infection" file-print seed-infection
+  file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev,CWDArea";##7Mar18added CWDAera
   file-close
   if subregion = TRUE [                                        ;v2.1 switch added for subregion
     file-open (word "subregion" cwd_region ".csv")
-    file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev"
+    file-print "seed-infection" file-print seed-infection              ;28Feb18 Addition version 2.1.1
+    file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+Subregion,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev"
     file-close
     file-open (word "subregion_tharvest" cwd_region ".csv")
-    file-print "SubregionArea,MaleFawnHarvestRate,FemaleFawnHarvestRate,MaleYearlingHarvestRate,FemaleYearlingHarvestRate,MaleAdultHarvestRate,FemaleAdultHarvestRate,TotalPreHarvestPop,TotalCWD+,CWDarea,CWDhuntedDeer,CWDtestedDeer,ObsPrev"
+    file-print "seed-infection" file-print seed-infection             ;28Feb18 Addition version 2.1.1
+    file-print "SubregionArea,MaleFawnCullingRate,FemaleFawnCullingRate,MaleYearlingCullingRate,FemaleYearlingCullingRate,MaleAdultCullingRate,FemaleAdultCullingRate,TotalPreHarvestPopSubregion,TotalCWD+Subregion,AdultMaleCulled,YearlingMaleCulled,FawnMaleCulled,AdultFemaleCulled,YearlingFemaleCulled,FawnFemaleCulled,CWDarea,CWDhuntedDeer,CWDtestedDeer,ObsPrev"
     file-close
   ]
   ask deers [ht]                                             ;v2.1 deer ht in setup
@@ -208,7 +219,7 @@ to setup-landscape
   if (cwd_region = "Callaway County")[import-world "PostHarvestPopulationCallawayCounty_v2.csv"]
   if (cwd_region = "Carroll County")[import-world "PostHarvestPopulationCarrollCounty_v2.csv"]
   if (cwd_region = "Chariton County")[import-world "PostHarvestPopulationCharitonCounty_v2.csv"]
-  if (cwd_region = "Cole County")[import-world "PostHarvestPopulationColeCounty_v2_v2.csv"]
+  if (cwd_region = "Cole County")[import-world "PostHarvestPopulationColeCounty_v2.csv"]
   if (cwd_region = "Cooper County")[import-world "PostHarvestPopulationCooperCounty_v2.csv"]
   ;if (cwd_region = "Crawford County")[import-world "PostHarvestPopulationCrawfordCounty_v2.csv"]
   if (cwd_region = "Franklin County")[import-world "PostHarvestPopulationFranklinCounty_v2.csv"]
@@ -279,7 +290,7 @@ to go
     [ set inf-focus patches with [ do = 1 and trialL = 1 ] ]
     [ set inf-focus patches with [ do = 1 ] ]
     ask n-of 1 inf-focus [;patches with [ do = 1 and trialL = 1 ] [
-      ask n-of 10 deers in-radius 1.5 with [ aim > 24 ][                            ;version 2.1 changed from 3 infected deer to 10 infected deer
+      ask n-of seed-infection deers in-radius 1.5 with [ aim > 24 ][                        ;28Feb18 slider seed-infection added in version 2.1.1    ;version 2.1 changed from 3 infected deer to 10 infected deer
         set cwd 1
         set cwdpr (5 + random 6)
 ;        ask patch-here [
@@ -443,7 +454,7 @@ to go
       ;set peramht tamt / tamh
       ;set perafht taft / tafh
       set op precision (tcwd / (tamt + tymt + tfmt + taft + tyft + tfft)) 3
-      set vals2 (list (tamh) (tymh) (tfamh) (tafh) (tyfh) (tfafh) (tamt) (tymt) (tfmt) (taft) (tyft) (tfft) (hcwd) (tcwd) (pdcwd) (op))
+      set vals2 (list (tamh) (tymh) (tfamh) (tafh) (tyfh) (tfafh) (tamt) (tymt) (tfmt) (taft) (tyft) (tfft) (hcwd) (tcwd) (pdcwd) (op) (cwd_area));##7Mar18 added cwd-area
       set vals (sentence vals1 vals2)
       file-open (word "cwdinfdy" cwd_region ".csv")
       file-type first vals
@@ -453,7 +464,7 @@ to go
       file-print""
       file-close
       if subregion = TRUE [
-        set op-sr precision (tcwd-sr / (tamt-sr + tymt-sr + tfmt-sr + taft-sr + tyft-sr + tfft-sr)) 3
+        carefully [ set op-sr precision (tcwd-sr / (tamt-sr + tymt-sr + tfmt-sr + taft-sr + tyft-sr + tfft-sr)) 3 ] [ set op-sr 0 ]
         set vals4 (list (tamh-sr) (tymh-sr) (tfamh-sr) (tafh-sr) (tyfh-sr) (tfafh-sr) (tamt-sr) (tymt-sr) (tfmt-sr) (taft-sr) (tyft-sr) (tfft-sr) (hcwd-sr) (tcwd-sr) (pdcwd-sr) (op-sr))
         set vals5 (sentence vals3 vals4)
         file-open (word "subregion" cwd_region ".csv")
@@ -463,7 +474,7 @@ to go
           ]
         file-print""
         file-close
-        set vals7 (list (cwd_area) (hcwd-sr) (tcwd-sr) (op-sr))
+        set vals7 (list (tamc-sr) (tymc-sr) (tfamc-sr) (tafc-sr) (tyfc-sr) (tfafc-sr) (cwd_area) (hcwd-sr) (tcwd-sr) (op-sr))
         set vals8 (sentence vals6 vals7)
         file-open (word "subregion_tharvest" cwd_region ".csv")
         file-type first vals8
@@ -511,16 +522,22 @@ to go
       set fa-sr 0
       set tamh-sr 0
       set tamt-sr 0
+      set tamc-sr 0  ;##11Mar18
       set tymh-sr 0
       set tymt-sr 0
+      set tymc-sr 0  ;##11Mar18
       set tfamh-sr 0
       set tfmt-sr 0
+      set tfamc-sr 0  ;##11Mar18
       set tafh-sr 0
       set taft-sr 0
+      set tafc-sr 0   ;##11Mar18
       set tyfh-sr 0
       set tyft-sr 0
+      set tyfc-sr 0   ;##11Mar18
       set tfafh-sr 0
       set tfft-sr 0
+      set tfafc-sr 0  ;##11Mar18
       set dcwdm-sr 0
       set dcwdmy-sr 0
       set dcwdmf-sr 0
@@ -1701,12 +1718,17 @@ to hunting-mortality-mf12
     ]
     set tfamh tfamh + 1
     set tfmt tfmt + 1
+    if [ trialL ] of patch-here = 1 [          ;##11Mar18
+      set tfamh-sr tfamh-sr + 1
+      set tfmt-sr tfmt-sr + 1
+    ]
     die
   ]
   [ if (cwd = 1)[
     set dcwdmf (dcwdmf + 1)
     ]
     set tfamh (tfamh + 1)
+    if [ trialL ] of patch-here = 1 [ set tfamh-sr tfamh-sr + 1 ]     ;##11Mar18
     die
     ]
 end
@@ -1722,9 +1744,9 @@ to hunting-mortality-mf12-sr
     set tcwdmf-sr tcwdmf-sr + 1
     ]
   set tfamh tfamh + 1
-  set tfamh-sr tfamh-sr + 1
+  set tfamc-sr tfamc-sr + 1     ;##11Mar18 changed from set tfamh-sr tfamh-sr + 1
   set tfmt tfmt + 1
-  set tfmt-sr tfmt-sr + 1
+  ;set tfmt-sr tfmt-sr + 1
   die
 end
 to hunting-mortality-ff12
@@ -1739,12 +1761,17 @@ to hunting-mortality-ff12
     ]
     set tfafh tfafh + 1
     set tfft tfft + 1
+    if [ trialL ] of patch-here = 1 [    ;##11Mar18
+      set tfafh-sr tfafh-sr + 1
+      set tfft-sr tfft-sr + 1
+    ]
     die
   ]
   [if (cwd = 1)[
     set dcwdff (dcwdff + 1)
     ]
     set tfafh (tfafh + 1)
+    if [ trialL ] of patch-here = 1 [ set tfafh-sr tfafh-sr + 1 ]    ;##11Mar18
     die
   ]
 end
@@ -1760,9 +1787,9 @@ to hunting-mortality-ff12-sr
     set tcwdff-sr tcwdff-sr + 1
     ]
   set tfafh tfafh + 1
-  set tfafh-sr tfafh-sr + 1
+  set tfafc-sr tfafc-sr + 1   ;##11Mar18 changed from set tfafh-sr tfafh-sr + 1
   set tfft tfft + 1
-  set tfft-sr tfft-sr + 1
+  ;set tfft-sr tfft-sr + 1
   die
 end
 to hunting-mortality-my
@@ -1773,12 +1800,17 @@ to hunting-mortality-my
     ]
     set tymh tymh + 1
     set tymt tymt + 1
+    if [ trialL ] of patch-here = 1 [ ;##11Mar18
+      set tymh-sr tymh-sr + 1
+      set tymt-sr tymt-sr + 1
+    ]
     die
     ]
   [ if (cwd = 1)[
     set dcwdmy (dcwdmy + 1)
     ]
     set tymh (tymh + 1)
+    if [ trialL ] of patch-here = 1 [ set tymh-sr tymh-sr + 1 ]    ;##11Mar18
     die
   ]
 end
@@ -1794,9 +1826,9 @@ to hunting-mortality-my-sr
     set tcwdmy-sr tcwdmy-sr + 1
     ]
   set tymh tymh + 1
-  set tymh-sr tymh-sr + 1
+  set tymc-sr tymc-sr + 1   ;##11Mar18 changed from set tymh-sr tymh-sr + 1
   set tymt tymt + 1
-  set tymt-sr tymt-sr + 1
+  ;set tymt-sr tymt-sr + 1
   die
 end
 to hunting-mortality-fy
@@ -1814,12 +1846,17 @@ to hunting-mortality-fy
     ]
     set tyfh tyfh + 1
     set tyft tyft + 1
+    if [ trialL ] of patch-here = 1 [  ;##11Mar18
+     set tyfh-sr tyfh-sr + 1
+     set tyft-sr tyft-sr + 1
+    ]
     die
   ]
   [if (cwd = 1)[
     set dcwdfy (dcwdfy + 1)
     ]
     set tyfh (tyfh + 1)
+    if [ trialL ] of patch-here = 1 [ set tyfh-sr tyfh-sr + 1 ]    ;##11Mar18
     die
   ]
 end
@@ -1838,9 +1875,9 @@ to hunting-mortality-fy-sr
     set tcwdfy-sr tcwdfy-sr + 1
   ]
   set tyfh tyfh + 1
-  set tyfh-sr tyfh-sr + 1
+  set tyfc-sr tyfc-sr + 1  ;##11Mar 18 changed from set tyfh-sr tyfh-sr + 1
   set tyft tyft + 1
-  set tyft-sr tyft-sr + 1
+  ;set tyft-sr tyft-sr + 1
   die
 end
 to hunting-mortality-ma
@@ -1857,12 +1894,17 @@ to hunting-mortality-ma
     ]
     set tamh tamh + 1
     set tamt tamt + 1
+    if [ trialL ] of patch-here = 1 [   ;##11Mar18
+      set tamh-sr tamh-sr + 1
+      set tamt-sr tamt-sr + 1
+    ]
     die
     ]
   [ if (cwd = 1) [
     set dcwdm (dcwdm + 1)
     ]
     set tamh tamh + 1
+    if [ trialL ] of patch-here = 1 [ set tamh-sr tamh-sr + 1 ]    ;##11Mar18
     die
     ]
 end
@@ -1878,9 +1920,9 @@ to hunting-mortality-ma-sr
     set tcwdm-sr tcwdm-sr + 1
     ]
   set tamh tamh + 1
-  set tamh-sr tamh-sr + 1
+  set tamc-sr tamc-sr + 1   ;##11Mar18 changed from set tamh-sr tamh-sr + 1
   set tamt tamt + 1
-  set tamt-sr tamt-sr + 1
+  ;set tamt-sr tamt-sr + 1
   die
 end
 to hunting-mortality-fa
@@ -1896,12 +1938,17 @@ to hunting-mortality-fa
     ]
     set tafh tafh + 1
     set taft taft + 1
+    if [ trialL ] of patch-here = 1 [ ;##11Mar18
+      set tafh-sr tafh-sr + 1
+      set taft-sr taft-sr + 1
+    ]
     die
     ]
   [ if (cwd = 1)[
     set dcwdf (dcwdf + 1)
     ]
     set tafh tafh + 1
+    if [ trialL ] of patch-here = 1 [ set tafh-sr tafh-sr + 1 ]    ;##11Mar18
     die
     ]
 end
@@ -1918,9 +1965,9 @@ to hunting-mortality-fa-sr
     set tcwdf-sr tcwdf-sr + 1
     ]
   set tafh tafh + 1
-  set tafh-sr tafh-sr + 1
+  set tafc-sr tafc-sr + 1   ;## 11Mar18 changed from set tafh-sr tafh-sr + 1
   set taft taft + 1
-  set taft-sr taft-sr + 1
+  ;set taft-sr taft-sr + 1
   die
 end
 
@@ -2315,13 +2362,13 @@ to-report fa
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-665
-33
-823
-252
+678
+73
+1046
+430
 -1
 -1
-6.0
+12.0
 1
 10
 1
@@ -2332,9 +2379,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-24
+29
 0
-34
+28
 0
 0
 1
@@ -2342,10 +2389,10 @@ ticks
 30.0
 
 BUTTON
-479
-36
-543
-69
+459
+10
+523
+43
 Setup
 setup
 NIL
@@ -2359,10 +2406,10 @@ NIL
 1
 
 MONITOR
-1611
-112
-1681
-157
+216
+624
+286
+669
 total deer
 count deers
 17
@@ -2370,10 +2417,10 @@ count deers
 11
 
 MONITOR
-1610
-14
-1682
-59
+215
+526
+287
+571
 male deer
 count deers with [sex = 1]
 17
@@ -2381,10 +2428,10 @@ count deers with [sex = 1]
 11
 
 MONITOR
-1611
-63
-1681
-108
+216
+575
+286
+620
 female deer
 count deers with [sex = 2]
 17
@@ -2572,10 +2619,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-578
-35
-641
-68
+565
+10
+628
+43
 Go
 go
 T
@@ -2589,10 +2636,10 @@ NIL
 1
 
 PLOT
-1702
-10
-1875
-156
+39
+529
+199
+662
 deer population
 months
 deer
@@ -2667,10 +2714,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-1556
-458
-1692
-503
+508
+742
+644
+787
 CWD detection probability
 pdcwd
 0
@@ -2678,10 +2725,10 @@ pdcwd
 11
 
 MONITOR
-1549
-17
-1606
-62
+677
+19
+734
+64
 Year
 year
 17
@@ -2689,10 +2736,10 @@ year
 11
 
 MONITOR
-1551
-66
-1608
-111
+744
+19
+801
+64
 Month
 remainder ticks 12 + 1
 17
@@ -2700,10 +2747,10 @@ remainder ticks 12 + 1
 11
 
 PLOT
-1705
-303
-1881
-445
+211
+671
+371
+791
 Doe group size
 NIL
 NIL
@@ -2718,10 +2765,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [gr + 1] of deers with [gl = 1]"
 
 PLOT
-1703
-160
-1878
-295
+39
+669
+199
+789
 Bachelor group size
 NIL
 NIL
@@ -2736,10 +2783,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [gr] of deers with [ml > 0]"
 
 MONITOR
-1555
-308
-1689
-353
+379
+693
+502
+738
 CWD infected deer
 count deers with [cwd = 1]
 17
@@ -2755,7 +2802,7 @@ SLIDER
 %fawn-male-harvest-tested
 0
 1
-0.0
+0.1
 0.1
 1
 NIL
@@ -2770,7 +2817,7 @@ SLIDER
 %yearling-male-harvest-tested
 0
 1
-0.0
+0.3
 0.1
 1
 NIL
@@ -2785,7 +2832,7 @@ SLIDER
 %adult-male-harvest-tested
 0
 1
-0.5
+0.4
 0.1
 1
 NIL
@@ -2800,7 +2847,7 @@ SLIDER
 %fawn-female-harvest-tested
 0
 1
-0.0
+0.1
 0.1
 1
 NIL
@@ -2815,7 +2862,7 @@ SLIDER
 %yearling-female-harvest-tested
 0
 1
-0.0
+0.3
 0.1
 1
 NIL
@@ -2830,7 +2877,7 @@ SLIDER
 %adult-female-harvest-tested
 0
 1
-0.5
+0.4
 0.1
 1
 NIL
@@ -2844,7 +2891,7 @@ CHOOSER
 cwd_region
 cwd_region
 "Boone County" "Callaway County" "Carroll County" "Chariton County" "Cole County" "Cooper County" "Franklin County" "Gasconade County" "Knox County" "Linn County" "Livingston County" "Miller County" "Moniteau County" "Morgan County" "Osage County" "Putnam County" "Randolph County" "Schuyler County" "Scotland County" "Shelby County" "St. Charles County" "St. Louis County" "Sullivan County" "Warren County" "Washington County" "MaconLinnCoreArea" "Seven County"
-13
+14
 
 TEXTBOX
 161
@@ -2947,10 +2994,10 @@ Female adults
 1
 
 MONITOR
-1556
-357
-1688
-402
+380
+741
+502
+786
 CWD true prevalence
 precision (count deers with [cwd = 1] / count deers) 3
 17
@@ -2958,10 +3005,10 @@ precision (count deers with [cwd = 1] / count deers) 3
 11
 
 MONITOR
-1555
-407
-1689
-452
+510
+694
+644
+739
 CWD area (square miles)
 cwd_area
 17
@@ -2969,10 +3016,10 @@ cwd_area
 11
 
 PLOT
-1524
-161
-1701
-302
+423
+528
+600
+669
 CWD prevalence
 Months
 True_prevalence
@@ -2992,7 +3039,7 @@ INPUTBOX
 71
 490
 patchx
-13.0
+19.0
 1
 0
 Number
@@ -3003,7 +3050,7 @@ INPUTBOX
 128
 491
 patchy
-26.0
+11.0
 1
 0
 Number
@@ -3014,7 +3061,7 @@ INPUTBOX
 184
 492
 radius
-5.0
+1.0
 1
 0
 Number
@@ -3039,7 +3086,7 @@ mf12hm-sr
 mf12hm-sr
 0
 1
-0.0
+0.8
 0.01
 1
 NIL
@@ -3054,7 +3101,7 @@ ff12hm-sr
 ff12hm-sr
 0
 1
-0.0
+0.8
 0.01
 1
 NIL
@@ -3069,7 +3116,7 @@ myhm-sr
 myhm-sr
 0
 1
-0.0
+0.8
 0.01
 1
 NIL
@@ -3084,7 +3131,7 @@ fyhm-sr
 fyhm-sr
 0
 1
-0.0
+0.8
 0.01
 1
 NIL
@@ -3099,7 +3146,7 @@ mahm-sr
 mahm-sr
 0
 1
-0.0
+0.8
 0.01
 1
 NIL
@@ -3114,7 +3161,7 @@ fahm-sr
 fahm-sr
 0
 1
-0.0
+0.8
 0.01
 1
 NIL
@@ -3137,7 +3184,7 @@ SWITCH
 426
 subregion
 subregion
-1
+0
 1
 -1000
 
@@ -3147,6 +3194,31 @@ TEXTBOX
 627
 385
 -------------------------------------------------------------------------------------
+20
+0.0
+1
+
+SLIDER
+452
+72
+624
+105
+seed-infection
+seed-infection
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+38
+506
+641
+546
+------------------------------------------------------------------------------------
 20
 0.0
 1
@@ -4149,6 +4221,112 @@ NetLogo 6.0.2
     </enumeratedValueSet>
     <enumeratedValueSet variable="cwd_region">
       <value value="&quot;Boone County&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="10" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="manhm">
+      <value value="0.01"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf6nhm">
+      <value value="0.055"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12hm">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%adult-male-harvest-tested">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="subregion">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%adult-female-harvest-tested">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fahm">
+      <value value="0.2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-infection">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%fawn-male-harvest-tested">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="patchx">
+      <value value="19"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fynhm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12hm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="patchy">
+      <value value="11"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="myhm">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fanhm">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fyhm">
+      <value value="0.15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12hm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%yearling-male-harvest-tested">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf6hm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fyhm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="myhm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12hm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff6nhm">
+      <value value="0.055"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fahm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mahm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12nhm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%yearling-female-harvest-tested">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12nhm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mahm">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff6hm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="radius">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%fawn-female-harvest-tested">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mynhm">
+      <value value="0.01"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="cwd_region">
+      <value value="&quot;Osage County&quot;"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>

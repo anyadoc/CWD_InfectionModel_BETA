@@ -97,6 +97,7 @@ globals
   hcwd
   tcwd
   totcwdd
+  totcwdd-sr
   pdcwd                                           ;probability of detecting CWD
   op                                              ;observed prevalence
   hcwd-sr
@@ -130,7 +131,6 @@ globals
   fy-sr
   ma-sr
   fa-sr
-  far
   d
 
   ;MOOvPOP( Agent-based model of deer population dynamics) generated deer population is used to initialize this model ('import-world'),
@@ -177,17 +177,19 @@ breed [t-patches t-patch]
 to setup
   clear-all
   setup-landscape
+  reset-ticks
   if subregion = TRUE [                                           ;v2.1 switch added for subregion
     ask patch patchx patchy[
       set trialL 1
       let test-patches patches in-radius-nowrap radius with [ do = 1 ]
       set test_area count test-patches
-      ask test-patches [set trialL 1]
+      ask test-patches [set trialL 1
+        set pcolor yellow
+      ]
       ]
   ]
   ask deers with [ groid > 0 ] [
       if distance deer groid > 3 [
-        set far far + 1
         set groid -1 set gr -2
   ]]
 
@@ -196,6 +198,23 @@ to setup
     set cwdi 3 + random 2
     set cwdc 15 + random 4
   ]
+
+  ;Init CWD on landscape
+  let inf-focus nobody
+  ifelse subregion = TRUE                                   ;v2.1 after adding a switch for subregion
+  [ set inf-focus patches with [ do = 1 and trialL = 1 ] ]
+  [ set inf-focus patches with [ do = 1 ] ]
+  ask n-of 1 inf-focus [;patches with [ do = 1 and trialL = 1 ] [
+    set pcolor orange
+    ask n-of seed-infection deers in-radius 1.5 with [ aim > 24 ][                        ;28Feb18 slider seed-infection added in version 2.1.1    ;version 2.1 changed from 3 infected deer to 10 infected deer
+      set cwd 1
+      set cwdpr (5 + random 6)
+;      ask patch-here [
+;        set pcolor red
+;      ]
+    ]
+  ]
+
   ;set yearling-male-dispersal-rate 0.46
   file-open (word "cwdinfdy" cwd_region ".csv")                       ;28Feb18 Addition version 2.1.1
   file-print "seed-infection" file-print seed-infection
@@ -211,8 +230,6 @@ to setup
     file-print "SubregionArea,MaleFawnCullingRate,FemaleFawnCullingRate,MaleYearlingCullingRate,FemaleYearlingCullingRate,MaleAdultCullingRate,FemaleAdultCullingRate,TotalPreHarvestPopSubregion,TotalCWD+Subregion,AdultMaleCulled,YearlingMaleCulled,FawnMaleCulled,AdultFemaleCulled,YearlingFemaleCulled,FawnFemaleCulled,CWDarea,CWDhuntedDeer,CWDtestedDeer,ObsPrev"
     file-close
   ]
-  ask deers [ht]                                             ;v2.1 deer ht in setup
-  reset-ticks
 end
 to setup-landscape
   if (cwd_region = "Boone County")[import-world "PostHarvestPopulationBooneCounty_v2.csv"]
@@ -245,6 +262,7 @@ to setup-landscape
   if (cwd_region = "Seven County")[import-world "PostHarvestPopulationSevenCounty_v2.csv"]
   ask deers [ set hidden? TRUE ]
   random-seed new-seed
+
 end
 ;------------------------------------------------------------
 to-report doe-group-size-regulator
@@ -274,7 +292,7 @@ end
 
 ;------------------------------------------------------------
 to go
-  if (ticks = 60) [
+  if (ticks = 60 or count deers with [cwd = 1 ] = 0) [
     stop
   ]
 
@@ -284,39 +302,29 @@ to go
     ;ask deers [ ht ]                                             ;v2.1 deer ht in setup
     ;export-interface (word "CWD landscape month " ticks ".png")
     ;]
-  if (ticks = 0)[
-    let inf-focus nobody
-    ifelse subregion = TRUE                                   ;v2.1 after adding a switch for subregion
-    [ set inf-focus patches with [ do = 1 and trialL = 1 ] ]
-    [ set inf-focus patches with [ do = 1 ] ]
-    ask n-of 1 inf-focus [;patches with [ do = 1 and trialL = 1 ] [
-      ask n-of seed-infection deers in-radius 1.5 with [ aim > 24 ][                        ;28Feb18 slider seed-infection added in version 2.1.1    ;version 2.1 changed from 3 infected deer to 10 infected deer
-        set cwd 1
-        set cwdpr (5 + random 6)
-;        ask patch-here [
-;          set pcolor red
-;        ]
-      ]
-    ]
-  ]
-  let cwdpd count deers with [ cwd = 1 ]
-  if (cwdpd = 0)[                                                                    ;version 2.1 model stops if there is no cwd+ deer in the model landscape
-    stop
+
+  ;let cwdpd count deers with [ cwd = 1 ]
+  ;if (cwdpd = 0)[                                                                    ;version 2.1 model stops if there is no cwd+ deer in the model landscape
+    ;stop
     ;user-message (word "No CWD+ deer in the model landscape!")
-  ]
+  ;]
+
   ask deers [
     set aim (aim + 1)                                                                 ;turtle procedure deer-grow
     deer-die
+    if cwd = 1 [
+      cwd-progression
     ]
-  let cwd-deers deers with [ cwd = 1 ]
-  ask cwd-deers [
-    cwd-progression
+  ]
+
+  ;ask deers with [ cwd = 1 ] [
+    ;cwd-progression
 ;    ask patch-here [
 ;      if (pcolor != yellow)[
 ;        set pcolor yellow
 ;        ]
 ;      ]
-    ]
+    ;]
 ;  ask patches with [ pcolor = yellow ][
 ;    if not any? deers-here with [ cwd = 1 ][
 ;      set pcolor scale-color green forest-percent 1 0
@@ -392,42 +400,67 @@ to go
     set fy-sr count deers-sr with [ sex = 2 and aim = 19 ]
     set ma-sr count deers-sr with [ sex = 1 and aim > 30 ]
     set fa-sr count deers-sr with [ sex = 2 and aim > 30 ]
-    ask cwd-deers[
-      ifelse (sex = 1)
-      [ ifelse (aim > 21)
-        [ set mcwd mcwd + 1 ]
-        [ ifelse (aim > 17)
-          [ set mycwd mycwd + 1 ]
-          [ set mfcwd mfcwd + 1 ]
-        ]
-      ]
-      [ ifelse (aim > 21)
-        [ set fcwd fcwd + 1 ]
-        [ ifelse (aim > 17)
-          [ set fycwd fycwd + 1 ]
-          [ set ffcwd ffcwd + 1 ]
-          ]
-        ]
-      if ([ trialL ] of patch-here = 1)[
-        ifelse (sex = 1)
-        [ ifelse (aim > 21)
-          [ set mcwd-sr mcwd-sr + 1 ]
-          [ ifelse (aim > 17)
-            [ set mycwd-sr mycwd-sr + 1 ]
-            [ set mfcwd-sr mfcwd-sr + 1 ]
-          ]
-        ]
-        [ ifelse (aim > 21)
-        [ set fcwd-sr fcwd-sr + 1 ]
-        [ ifelse (aim > 17)
-          [ set fycwd-sr fycwd-sr + 1 ]
-          [ set ffcwd-sr ffcwd-sr + 1 ]
-        ]
-        ]
-      ]
 
+    ;Counts of infected deer by sex/ageclass
+    let cwd-deers deers with [cwd = 1]
+    set totcwdd count cwd-deers
+    set mcwd mcwd + count cwd-deers with [ sex = 1 and aim > 21 ]
+    set mycwd mycwd + count cwd-deers with [ sex = 1 and aim <= 21 and aim > 17 ]
+    set mfcwd mfcwd + count cwd-deers with [ sex = 1 and aim <= 17 ]
+    set fcwd mcwd + count cwd-deers with [ sex = 2 and aim > 21 ]
+    set fycwd mycwd + count cwd-deers with [ sex = 2 and aim <= 21 and aim > 17 ]
+    set ffcwd mfcwd + count cwd-deers with [ sex = 2 and aim <= 17 ]
+
+    ;Counts of infected deer in subregion by sex/ageclass
+    if subregion = true [
+       let trialL-deers cwd-deers with [ trialL = 1 ]
+       set totcwdd-sr count trialL-deers
+       set mcwd-sr mcwd-sr + count trialL-deers with [ sex = 1 and aim > 21 ]
+       set mycwd-sr mycwd-sr + count trialL-deers with [ sex = 1 and aim < 21 and aim > 17 ]
+       set mfcwd-sr mfcwd-sr + count trialL-deers with [ sex = 1 and aim <= 17 ]
+       set fcwd-sr mcwd-sr + count trialL-deers with [ sex = 2 and aim > 21 ]
+       set fycwd-sr mycwd-sr + count trialL-deers with [ sex = 2 and aim < 21 and aim > 17 ]
+       set ffcwd-sr mfcwd-sr + count trialL-deers with [ sex = 2 and aim <= 17 ]
     ]
-    set totcwdd (mcwd + mycwd + mfcwd + fcwd + fycwd + ffcwd)
+    ;
+
+    ;ask cwd-deers[
+;    ask deers with [ cwd = 1 ][
+;      ifelse (sex = 1)
+;      [ ifelse (aim > 21)
+;        [ set mcwd mcwd + 1 ]
+;        [ ifelse (aim > 17)
+;          [ set mycwd mycwd + 1 ]
+;          [ set mfcwd mfcwd + 1 ]
+;        ]
+;      ]
+;      [ ifelse (aim > 21)
+;        [ set fcwd fcwd + 1 ]
+;        [ ifelse (aim > 17)
+;          [ set fycwd fycwd + 1 ]
+;          [ set ffcwd ffcwd + 1 ]
+;          ]
+;        ]
+;      if ([ trialL ] of patch-here = 1)[
+;        ifelse (sex = 1)
+;        [ ifelse (aim > 21)
+;          [ set mcwd-sr mcwd-sr + 1 ]
+;          [ ifelse (aim > 17)
+;            [ set mycwd-sr mycwd-sr + 1 ]
+;            [ set mfcwd-sr mfcwd-sr + 1 ]
+;          ]
+;        ]
+;        [ ifelse (aim > 21)
+;        [ set fcwd-sr fcwd-sr + 1 ]
+;        [ ifelse (aim > 17)
+;          [ set fycwd-sr fycwd-sr + 1 ]
+;          [ set ffcwd-sr ffcwd-sr + 1 ]
+;        ]
+;        ]
+;      ]
+;
+;    ]
+
     let phn-sr (mf-sr + my-sr + ma-sr + ff-sr + fy-sr + fa-sr)
     let phn (mf + my + ma + ff + fy + fa)
     set vals1 (list (ma) (my) (mf) (fa) (fy) (ff) (phn) (mcwd) (mycwd) (mfcwd) (fcwd) (fycwd) (ffcwd) (totcwdd))
@@ -2339,9 +2372,9 @@ end
 to-report year
   report floor (ticks / 12) + 1
 end
-to-report totcwdd-sr
-  report mcwd-sr + mycwd-sr + mfcwd-sr + fcwd-sr + fycwd-sr + ffcwd-sr
-end
+;to-report totcwdd-sr
+;  report mcwd-sr + mycwd-sr + mfcwd-sr + fcwd-sr + fycwd-sr + ffcwd-sr
+;end
 to-report mf
   report count deers with [ sex = 1 and aim < 12.5 ]
 end

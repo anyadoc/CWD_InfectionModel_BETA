@@ -1,4 +1,4 @@
-extensions [gis]
+extensions [gis profiler]
 globals
 [
   dxp                                            ;x coordinate of the patch where a yearling deer belongs before dispersal (natal range)
@@ -97,6 +97,7 @@ globals
   hcwd
   tcwd
   totcwdd
+  totcwdd-sr
   pdcwd                                           ;probability of detecting CWD
   op                                              ;observed prevalence
   hcwd-sr
@@ -111,9 +112,9 @@ globals
   ttaim                                           ;same
   tnm                                             ;to transfer the nm value
   ter                                             ;mating area (more for young deers)
-  infm
+  ;infm
   inff
-  avmates
+  ;avmates
   tinff
   grfis                                           ;group fission 10Jun16
   ngr
@@ -130,6 +131,7 @@ globals
   fy-sr
   ma-sr
   fa-sr
+  d
 
   ;MOOvPOP( Agent-based model of deer population dynamics) generated deer population is used to initialize this model ('import-world'),
   ;hence global variables from MOOvPOP are also included.
@@ -150,6 +152,7 @@ patches-own
   dfp
   dh
   trialL
+  patch-prev
 ]
 breed [deers deer]
 deers-own
@@ -175,19 +178,44 @@ breed [t-patches t-patch]
 to setup
   clear-all
   setup-landscape
+  reset-ticks
   if subregion = TRUE [                                           ;v2.1 switch added for subregion
     ask patch patchx patchy[
       set trialL 1
       let test-patches patches in-radius-nowrap radius with [ do = 1 ]
       set test_area count test-patches
-      ask test-patches [set trialL 1]
+      ask test-patches [set trialL 1
+        set pcolor yellow
+      ]
       ]
   ]
+  ask deers with [ groid > 0 ] [
+      if distance deer groid > 3 [
+        set groid -1 set gr -2
+  ]]
+
   ask deers [
     set cwdm 20 + random 6
     set cwdi 3 + random 2
     set cwdc 15 + random 4
   ]
+
+  ;Init CWD on landscape
+  let inf-focus nobody
+  ifelse subregion = TRUE                                   ;v2.1 after adding a switch for subregion
+  [ set inf-focus patches with [ do = 1 and trialL = 1 ] ]
+  [ set inf-focus patches with [ do = 1 ] ]
+  ask n-of 1 inf-focus [;patches with [ do = 1 and trialL = 1 ] [
+    set pcolor orange
+    ask n-of seed-infection deers in-radius 1.5 with [ aim > 24 ][                        ;28Feb18 slider seed-infection added in version 2.1.1    ;version 2.1 changed from 3 infected deer to 10 infected deer
+      set cwd 1
+      set cwdpr (5 + random 6)
+;      ask patch-here [
+;        set pcolor red
+;      ]
+    ]
+  ]
+
   ;set yearling-male-dispersal-rate 0.46
   file-open (word "cwdinfdy" cwd_region ".csv")                       ;28Feb18 Addition version 2.1.1
   file-print "seed-infection" file-print seed-infection
@@ -203,8 +231,6 @@ to setup
     file-print "SubregionArea,MaleFawnCullingRate,FemaleFawnCullingRate,MaleYearlingCullingRate,FemaleYearlingCullingRate,MaleAdultCullingRate,FemaleAdultCullingRate,TotalPreHarvestPopSubregion,TotalCWD+Subregion,AdultMaleCulled,YearlingMaleCulled,FawnMaleCulled,AdultFemaleCulled,YearlingFemaleCulled,FawnFemaleCulled,CWDarea,CWDhuntedDeer,CWDtestedDeer,ObsPrev"
     file-close
   ]
-  ask deers [ht]                                             ;v2.1 deer ht in setup
-  reset-ticks
 end
 to setup-landscape
   if (cwd_region = "Boone County")[import-world "PostHarvestPopulationBooneCounty_v2.csv"]
@@ -235,6 +261,9 @@ to setup-landscape
   if (cwd_region = "Washington County")[import-world "PostHarvestPopulationWashingtonCounty_v2.csv"]
   if (cwd_region = "MaconLinnCoreArea")[import-world "PostHarvestPopulationMaconLinnCoreArea_v2.csv"]
   if (cwd_region = "Seven County")[import-world "PostHarvestPopulationSevenCounty_v2.csv"]
+  ask deers [ set hidden? TRUE ]
+  random-seed new-seed
+
 end
 ;------------------------------------------------------------
 to-report doe-group-size-regulator
@@ -259,60 +288,56 @@ to-report mean-bachelor-group-size
  report (1 + random-normal 4 1)
 end
 to-report cwd_area
-  report count patches with [pcolor = red]
+  report count patches with [ patch-prev > 0 ] ;pcolor = red]  ;AB 16Mar18
 end
 
 ;------------------------------------------------------------
 to go
-  if (ticks = 60) [
+  if (ticks = 60 or count deers with [cwd = 1 ] = 0) [
     stop
   ]
-  if (d = 1 or d = 7) [
+
+  set d remainder ticks 12 + 1 ;month. Do calculation just once per iteration
+
+  ;if (d = 1 or d = 7) [
     ;ask deers [ ht ]                                             ;v2.1 deer ht in setup
-    export-interface (word "CWD landscape month " ticks ".png")
-    ]
-  if (ticks = 0)[
-    let inf-focus nobody
-    ifelse subregion = TRUE                                   ;v2.1 after adding a switch for subregion
-    [ set inf-focus patches with [ do = 1 and trialL = 1 ] ]
-    [ set inf-focus patches with [ do = 1 ] ]
-    ask n-of 1 inf-focus [;patches with [ do = 1 and trialL = 1 ] [
-      ask n-of seed-infection deers in-radius 1.5 with [ aim > 24 ][                        ;28Feb18 slider seed-infection added in version 2.1.1    ;version 2.1 changed from 3 infected deer to 10 infected deer
-        set cwd 1
-        set cwdpr (5 + random 6)
-;        ask patch-here [
-;          set pcolor red
-;        ]
-      ]
-    ]
-  ]
-  let cwdpd count deers with [ cwd = 1 ]
-  if (cwdpd = 0)[                                                                    ;version 2.1 model stops if there is no cwd+ deer in the model landscape
-    stop
+    ;export-interface (word "CWD landscape month " ticks ".png")
+    ;]
+
+  ;let cwdpd count deers with [ cwd = 1 ]
+  ;if (cwdpd = 0)[                                                                    ;version 2.1 model stops if there is no cwd+ deer in the model landscape
+    ;stop
     ;user-message (word "No CWD+ deer in the model landscape!")
-  ]
+  ;]
+
   ask deers [
     set aim (aim + 1)                                                                 ;turtle procedure deer-grow
     deer-die
+    if cwd = 1 [
+      cwd-progression
     ]
-  let cwd-deers deers with [ cwd = 1 ]
-  ask cwd-deers [
-    cwd-progression
-    ask patch-here [
-      if (pcolor != red)[
-        set pcolor red
-        ]
-      ]
-    ]
-  ask patches with [ pcolor = red ][
-    if not any? deers-here with [ cwd = 1 ][
-      set pcolor scale-color green forest-percent 1 0
-      set plabel 0
-      ]
-    ]
-  ask patches with [ pcolor = red ] [
-    set plabel count deers-here with [cwd = 1]
-    ]
+  ]
+
+  ;ask deers with [ cwd = 1 ] [
+    ;cwd-progression
+;    ask patch-here [
+;      if (pcolor != yellow)[
+;        set pcolor yellow
+;        ]
+;      ]
+    ;]
+;  ask patches with [ pcolor = yellow ][
+;    if not any? deers-here with [ cwd = 1 ][
+;      set pcolor scale-color green forest-percent 1 0
+;      ;set plabel 0
+;      ]
+;    ]
+;  ask patches with [ pcolor = yellow ] [
+;    ;set plabel count deers-here with [cwd = 1]
+;    ifelse count deers-here with [cwd = 1] > 5
+;    [ set pcolor orange ]
+;    [if count deers-here with [cwd = 1] > 10 [ set pcolor red ]]
+;    ]
   if (d = 1) [
     set vals 0
     set vals1 0
@@ -326,196 +351,30 @@ to go
     set fa-sr count deers-sr with [ sex = 2 and aim > 30 ]
     let posthpop (mf + my + ma + ff + fy + fa)
     let posthpop-sr (mf-sr + my-sr + ma-sr + ff-sr + fy-sr + fa-sr)
-    let tmbg ((my + ma) / 4)
-    let male-leaders deers with [ ml = 1 ]
-    let count-ml count male-leaders
-    let pot-leaders deers with [ sex = 1 and aim > 32 and ml = 0 ]
-    if (tmbg > count-ml)[
-      ask n-of (tmbg - count-ml) pot-leaders [
-        set ml 1
-        set mgroid who
-      ]
-    ]
-    set male-leaders deers with [ ml = 1 ]
-    ask male-leaders [
-      bachelor-group-formation
-    ]
-    ask male-leaders [
-      set tmgroid mgroid
-      set gr (count deers with [ mgroid = tmgroid ])
-    ]
+
+    form-bachelor-groups
+
     set oldm precision (count deers with [ sex = 1 and aim >= 229 ] / ma) 3
     set oldf precision (count deers with [ sex = 2 and aim >= 229 ] / fa) 3
+
     ]
-  if (d > 1 and d < 10)[              ;turtle procedure: bachelor group leaders assess their group membership
-    let male-leaders deers with [ ml = 1 ]
-    ask male-leaders[
-      set tmgroid mgroid
-      set gr (count deers with [ mgroid = tmgroid ])
-      if (gr <= 1)[ set ml 0]
-      ]
-    ]
+
   if (d = 10)[              ;turtle procedure: bachelor groups break down before the rutting season
     let male-leaders deers with [ ml = 1 ]
     ask male-leaders [ set gr 0 ]
     ]
   if (d = 5) [
-    let male-yearlings deers with [ aim = 13 and sex = 1 ]
-    ask male-yearlings [
-      set tgroid groid
-      if (gr = -1) [
-        ask deer tgroid [
-          set gr (gr - 1)
-          if (gr <= 0) [
-            set gl 0
-            set groid -1
-            set gr -2
-            set n_leaders_lost (n_leaders_lost + 1)
-            ]
-          ]
-        ]
-      set gr -2
-      set groid -1
-      if (random-float 1 < yearling-male-dispersal-rate) [
-        set mgroid -1
-        deer-mdisperse
-        ]
-      ]
-    let female-yearlings deers with [ aim = 13 and sex = 2 ]
-    ask female-yearlings [
-      if (random-float 1 < 0.22) [
-        set tgroid groid
-        if (gr = -1)[
-          ask deer tgroid[
-            set gr (gr - 1)
-            if (gr <= 0)[
-              set gl 0
-              set groid -1
-              set gr -2
-              set n_leaders_lost (n_leaders_lost + 1)
-              ]
-            ]
-          ]
-        set gr -2
-        set groid -1
-        deer-fdisperse
-        ]
-      ]
-    let breeding-females deers with [ sex = 2 and aim > 12 and cwdpr < cwdc] ;22Nov17 added cwdpr < cwdc
-    ask breeding-females[
-      if (aim = 13) [
-        if (random 100 < 21)[
-          set grfis 0
-          set tgroid groid
-          ifelse (tgroid >= 0)
-          [ ask deer tgroid [
-              ifelse (gr > 4)
-              [ set gr (gr - 1)
-                set tgroid -1
-                set tgr -2
-                set grfis 1
-              ]
-              [ set gr (gr + 1)
-                set tgroid groid
-                set tgr -1
-              ]
-              ]
-          if (grfis = 1)[
-            set groid -1
-            set gr -2
-          ]
-          ]
-          [ set tgroid -1
-            set tgr -2
-          ]
-          deer-reproduce
-          ]
-        ]
-      if (aim > 24)[
-        if (random 100 < 81)[
-          set grfis 0
-          set tgroid groid
-          ifelse (gl > 0)
-          [set gr (gr + 2)
-            if (gr > 6)[
-              let xgr gr - 6
-              let group-members deers with [ groid = tgroid and sex = 2 and aim > 13 and gl = 0 ]
-              ifelse (count group-members >= xgr)
-              [ set ngr xgr ]
-              [ set ngr count group-members ]
-              ask n-of ngr group-members [
-                new-group-formation
-                ]
-              ]
-            set tgr -1
-            ]
-          [ ifelse (groid < 0)
-            [ ifelse (aim > 36 and n_leaders_lost > 0)
-              [set gl 1
-                set gr 2
-                set groid who
-                set tgroid who
-                set tgr -1
-                set n_leaders_lost (n_leaders_lost - 1)
-                ]
-              [ set tgroid -1
-                set tgr -2
-                ]
-              ]
-            [ ask deer tgroid [
-                ifelse (gr > 4)
-                [ set gr (gr - 1)
-                  set tgroid -1
-                  set tgr -2
-                  set grfis 1
-                ]
-                [ set gr (gr + 2)
-                  set tgroid groid
-                  set tgr -1
-                ]
-            ]
-            if (grfis = 1)[
-              set groid -1
-              set gr -2
-              ]
-            ]
-            ]
-          deer-reproduce
-          ]
-      ]
-      ;---------------------------Join-group-------------------------------------------------------------------------
-      if (gl = 1 and gr < 4)[
-        set tgroid groid
-        let solitary-adult-females-here deers in-radius-nowrap 1.5 with [ sex = 2 and gr = -2 and aim >= 13 and cwdpr < cwdc ]
-        set sd count solitary-adult-females-here
-        set tgr 0
-        if (sd > 0)[
-          ifelse (sd > 2)
-          [ set sd1 2 ]
-          [ set sd1 1 ]
-          ask n-of sd1 solitary-adult-females-here [
-            set tmomid who
-            set groid tgroid
-            set gr -1
-            set tgr (tgr + 1)
-            if any? deers with [ momid = tmomid and aim = 1 ][
-              let my-fawns deers with [ momid = tmomid and aim = 1 ]
-              ask my-fawns [
-                set groid tgroid
-                set gr -1
-                set tgr (tgr + 1)
-                ]
-              ]
-            ]
-          ]
-        set gr (gr + tgr)
-        if (gr = 0)[
-          set groid -1
-          set gr -2
-        ]
-        ]
+
+    ask deers with [ aim = 13 and gr = -1 ][
+      yearlings-disperse
     ]
+
+    ask deers with [ sex = 2 and aim > 12 and cwdpr < cwdc][ ;breeding females
+      females-reproduce-group
+    ]
+
   ]
+
   if (d = 11) [
     let solitary-male-yearlings deers with [ sex = 1 and aim = 19 and gr = -2 and mgroid = -2 ]
     ask solitary-male-yearlings [
@@ -542,42 +401,67 @@ to go
     set fy-sr count deers-sr with [ sex = 2 and aim = 19 ]
     set ma-sr count deers-sr with [ sex = 1 and aim > 30 ]
     set fa-sr count deers-sr with [ sex = 2 and aim > 30 ]
-    ask cwd-deers[
-      ifelse (sex = 1)
-      [ ifelse (aim > 21)
-        [ set mcwd mcwd + 1 ]
-        [ ifelse (aim > 17)
-          [ set mycwd mycwd + 1 ]
-          [ set mfcwd mfcwd + 1 ]
-        ]
-      ]
-      [ ifelse (aim > 21)
-        [ set fcwd fcwd + 1 ]
-        [ ifelse (aim > 17)
-          [ set fycwd fycwd + 1 ]
-          [ set ffcwd ffcwd + 1 ]
-          ]
-        ]
-      if ([ trialL ] of patch-here = 1)[
-        ifelse (sex = 1)
-        [ ifelse (aim > 21)
-          [ set mcwd-sr mcwd-sr + 1 ]
-          [ ifelse (aim > 17)
-            [ set mycwd-sr mycwd-sr + 1 ]
-            [ set mfcwd-sr mfcwd-sr + 1 ]
-          ]
-        ]
-        [ ifelse (aim > 21)
-        [ set fcwd-sr fcwd-sr + 1 ]
-        [ ifelse (aim > 17)
-          [ set fycwd-sr fycwd-sr + 1 ]
-          [ set ffcwd-sr ffcwd-sr + 1 ]
-        ]
-        ]
-      ]
 
+    ;Counts of infected deer by sex/ageclass
+    let cwd-deers deers with [cwd = 1]
+    set totcwdd count cwd-deers
+    set mcwd mcwd + count cwd-deers with [ sex = 1 and aim > 21 ]
+    set mycwd mycwd + count cwd-deers with [ sex = 1 and aim <= 21 and aim > 17 ]
+    set mfcwd mfcwd + count cwd-deers with [ sex = 1 and aim <= 17 ]
+    set fcwd mcwd + count cwd-deers with [ sex = 2 and aim > 21 ]
+    set fycwd mycwd + count cwd-deers with [ sex = 2 and aim <= 21 and aim > 17 ]
+    set ffcwd mfcwd + count cwd-deers with [ sex = 2 and aim <= 17 ]
+
+    ;Counts of infected deer in subregion by sex/ageclass
+    if subregion = true [
+       let trialL-deers cwd-deers with [ trialL = 1 ]
+       set totcwdd-sr count trialL-deers
+       set mcwd-sr mcwd-sr + count trialL-deers with [ sex = 1 and aim > 21 ]
+       set mycwd-sr mycwd-sr + count trialL-deers with [ sex = 1 and aim < 21 and aim > 17 ]
+       set mfcwd-sr mfcwd-sr + count trialL-deers with [ sex = 1 and aim <= 17 ]
+       set fcwd-sr mcwd-sr + count trialL-deers with [ sex = 2 and aim > 21 ]
+       set fycwd-sr mycwd-sr + count trialL-deers with [ sex = 2 and aim < 21 and aim > 17 ]
+       set ffcwd-sr mfcwd-sr + count trialL-deers with [ sex = 2 and aim <= 17 ]
     ]
-    set totcwdd (mcwd + mycwd + mfcwd + fcwd + fycwd + ffcwd)
+    ;
+
+    ;ask cwd-deers[
+;    ask deers with [ cwd = 1 ][
+;      ifelse (sex = 1)
+;      [ ifelse (aim > 21)
+;        [ set mcwd mcwd + 1 ]
+;        [ ifelse (aim > 17)
+;          [ set mycwd mycwd + 1 ]
+;          [ set mfcwd mfcwd + 1 ]
+;        ]
+;      ]
+;      [ ifelse (aim > 21)
+;        [ set fcwd fcwd + 1 ]
+;        [ ifelse (aim > 17)
+;          [ set fycwd fycwd + 1 ]
+;          [ set ffcwd ffcwd + 1 ]
+;          ]
+;        ]
+;      if ([ trialL ] of patch-here = 1)[
+;        ifelse (sex = 1)
+;        [ ifelse (aim > 21)
+;          [ set mcwd-sr mcwd-sr + 1 ]
+;          [ ifelse (aim > 17)
+;            [ set mycwd-sr mycwd-sr + 1 ]
+;            [ set mfcwd-sr mfcwd-sr + 1 ]
+;          ]
+;        ]
+;        [ ifelse (aim > 21)
+;        [ set fcwd-sr fcwd-sr + 1 ]
+;        [ ifelse (aim > 17)
+;          [ set fycwd-sr fycwd-sr + 1 ]
+;          [ set ffcwd-sr ffcwd-sr + 1 ]
+;        ]
+;        ]
+;      ]
+;
+;    ]
+
     let phn-sr (mf-sr + my-sr + ma-sr + ff-sr + fy-sr + fa-sr)
     let phn (mf + my + ma + ff + fy + fa)
     set vals1 (list (ma) (my) (mf) (fa) (fy) (ff) (phn) (mcwd) (mycwd) (mfcwd) (fcwd) (fycwd) (ffcwd) (totcwdd))
@@ -585,86 +469,11 @@ to go
     set vals6 (list (test_area) (mf12hm-sr) (ff12hm-sr) (myhm-sr) (fyhm-sr) (mahm-sr) (fahm-sr) (phn-sr) (totcwdd-sr))
   ]
   if (d = 12) [
+
     ask deers [
-      if (aim < 10)[
-        ifelse (sex = 1)
-        [ if (random-float 1 < mf12hm)[
-          set tgroid groid
-          hunting-mortality-mf12
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < mf12hm-sr)[
-            set tgroid groid
-            hunting-mortality-mf12-sr
-            ]
-          ]
-        ]
-        [ if (random-float 1 < ff12hm)[
-          set tgroid groid
-          set twho who
-          hunting-mortality-ff12
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < ff12hm-sr)[
-            set tgroid groid
-            hunting-mortality-ff12-sr
-            ]
-          ]
-        ]
-        ]
-      if (aim = 20)[
-        ifelse (sex = 1)
-        [ if (random-float 1 < myhm)[
-          set tgroid groid
-          hunting-mortality-my
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < myhm-sr)[
-            set tgroid groid
-            hunting-mortality-my-sr
-            ]
-          ]
-        ]
-        [ if (random-float 1 < fyhm)[
-          set tgroid groid
-          set twho who
-          hunting-mortality-fy
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < fyhm-sr)[
-            set tgroid groid
-            hunting-mortality-fy-sr
-            ]
-          ]
-        ]
-        ]
-      if (aim > 30)[
-        ifelse (sex = 1)
-        [ if (random-float 1 < mahm)[
-          set tgroid groid
-          hunting-mortality-ma
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < mahm-sr)[
-            set tgroid groid
-            hunting-mortality-ma-sr
-            ]
-          ]
-        ]
-        [ if (random-float 1 < fahm)[
-          set tgroid groid
-          set twho who
-          hunting-mortality-fa
-          ]
-        if [ trialL ] of patch-here = 1[
-          if (random-float 1 < fahm-sr)[
-            set tgroid groid
-            hunting-mortality-fa-sr
-            ]
-          ]
-        ]
-        ]
+      hunting-mortality
       ]
+
     if (ticks >= 0) [
       set hcwd (dcwdm + dcwdmy + dcwdmf + dcwdf + dcwdfy + dcwdff)
       set tcwd (tcwdm + tcwdmy + tcwdmf + tcwdf + tcwdfy + tcwdff)
@@ -689,9 +498,7 @@ to go
       file-print""
       file-close
       if subregion = TRUE [
-        if (tamt-sr + tymt-sr + tfmt-sr + taft-sr + tyft-sr + tfft-sr > 0) [
-          set op-sr precision (tcwd-sr / (tamt-sr + tymt-sr + tfmt-sr + taft-sr + tyft-sr + tfft-sr)) 3
-        ]
+        carefully [ set op-sr precision (tcwd-sr / (tamt-sr + tymt-sr + tfmt-sr + taft-sr + tyft-sr + tfft-sr)) 3 ] [ set op-sr 0 ]
         set vals4 (list (tamh-sr) (tymh-sr) (tfamh-sr) (tafh-sr) (tyfh-sr) (tfafh-sr) (tamt-sr) (tymt-sr) (tfmt-sr) (taft-sr) (tyft-sr) (tfft-sr) (hcwd-sr) (tcwd-sr) (pdcwd-sr) (op-sr))
         set vals5 (sentence vals3 vals4)
         file-open (word "subregion" cwd_region ".csv")
@@ -783,6 +590,48 @@ to go
   set-current-plot "deer population"
   if (ticks = 0)[ clear-plot set-plot-pen-color blue set-plot-x-range 0 130 ]
   plotxy ticks count deers
+;
+;  ask patches with [ pcolor = yellow ][
+;    if not any? deers-here with [ cwd = 1 ][
+;      set pcolor scale-color green forest-percent 1 0
+;      ;set plabel 0
+;      ]
+;    ]
+;  ask patches [
+;    if dh = -1 [stop]
+;    ;set plabel count deers-here with [cwd = 1]
+;    let cwds count deers-here with [cwd = 1]
+;    ifelse cwds = 0
+;    [ set pcolor scale-color green forest-percent 1 0 ]
+;    [ ifelse cwds < 4
+;      [set pcolor yellow ]
+;      [ifelse cwds < 7
+;        [ set pcolor orange ]
+;        [ set pcolor red ]
+;  ]]
+;  ]
+
+  ask patches [
+    if dh = -1 [stop]
+    let pop count deers-here
+    let prev 0
+    if pop > 0 [set patch-prev (count deers-here with [cwd = 1]) / pop]
+    ifelse patch-prev > 0
+    [set pcolor scale-color red patch-prev 1 0]
+    [ set pcolor scale-color green forest-percent 1 0 ]
+;    ifelse prev = 0
+;    [ set pcolor scale-color green forest-percent 1 0 ]
+;    [ ifelse prev < 0.05
+;      [set pcolor yellow ]
+;      [ifelse prev < 0.1
+;        [ set pcolor orange ]
+;        [ set pcolor red ]
+;  ]]
+  ]
+
+
+
+
   tick
 end
 
@@ -790,70 +639,63 @@ to cwd-progression
   set cwdpr cwdpr + 1
   if (cwdpr >= cwdm) [ deer-die-cwd ]
   if ((cwdpr > cwdi) and (cwdpr < cwdc)) [                      ; infectious phase
+
+    let local-deers deers in-radius-nowrap 3   ; immediate limitation to local deer
+    let close-deers local-deers in-radius-nowrap 1.5  ;even closer
+
     ifelse (sex = 1)                                            ; infectious male deer
     [ ifelse (aim < 13)                                         ; infectious male fawn
-      [ set twho who
-        set tgroid groid
-        set ttmomid momid
-        set ttaim aim
-        if (d <= 4)[                                            ; male fawns of age 9 to 12 months
-          let mom-deer deers with [ who = ttmomid and cwd = 0 ]
-          if any? mom-deer [                                    ; if mom is alive and uninfected
-            ask mom-deer [
-              if (random-float 1 < (0.06 + random-float 0.08))[ ; probability of infection is 0.06-0.13
-                set cwd 1
-                ]
-              ]
+      [ ;set twho who
+        let lgroid groid
+        let lmom momid
+        ;set ttmomid momid
+        ;set ttaim aim
+        if (d <= 4)[
+
+          ask close-deers with [ who = lmom and cwd = 0 ][ ; uninfected mom
+            if (random-float 1 < (0.06 + random-float 0.08))[ ; probability of infection is 0.06-0.13
+              set cwd 1
             ]
-          let full-siblings deers with [ momid = ttmomid and aim < 13 and cwd = 0 ]
-          if any? full-siblings [                               ; if any full-siblings (same cohort) alive and uninfected
-            ask full-siblings [
-              ifelse (sex = 2)
-              [ if (random-float 1 < (0.06 + random-float 0.08))[  ; female full sibling- probability of infection 0.06-0.13
-                set cwd 1
-                ]
-              ]
-              [ if (random-float 1 < (0.13 + random-float 0.14))[  ; male full sibling- probability of infection 0.13-0.26
-                set cwd 1
-                ]
-                ]
-              ]
+          ]
+
+          ask close-deers with [ momid = lmom and aim < 13 and cwd = 0 ][ ; full siblings in cohort alive and uninfected
+            ifelse (sex = 2)
+            [ if (random-float 1 < (0.06 + random-float 0.08))[  ; female full sibling- probability of infection 0.06-0.13
+              set cwd 1]]
+            [ if (random-float 1 < (0.13 + random-float 0.14))[  ; male full sibling- probability of infection 0.13-0.26
+              set cwd 1]]
+           ]
+
+          if (groid >= 0)[                                         ; if the infected deer is a group member
+
+            ask local-deers with [ groid = lgroid and who != lmom and cwd = 0 ][  ; uninfected group members other than mom
+
+              ifelse (momid = lmom)
+              [ if (sex = 2 and aim > 20) [                        ; female half-siblings in group
+                  if (random-float 1 < 0.07) [ set cwd 1 ]]]
+;              [ if (sex = 2 and aim > 20 and aim < 25) [         ; 1/2 sibling female yearlings in group
+;                  if (random-float 1 < 0.07)[                      ; probability of infection 0-0.06
+;                    set cwd 1
+;                  ]
+;                ]
+;                  if (sex = 2 and aim > 24) [                      ; adult female 1/2 sibling in group
+;                    if (random-float 1 < 0.07)[                    ; probability of infection 0-0.06
+;                      set cwd 1
+;                      ]
+;                    ]
+;               ]
+
+               [ ifelse (sex = 2 and aim > 20)                      ; female yearlings and adults in group, except mom and 1/2 siblings
+                 [ if (random-float 1 < 0.07)[ set cwd 1 ]]                      ; probability of infection 0-0.06
+                 [ if (aim < 13) [
+                      ifelse (sex = 2)
+                      [ if (random-float 1 < (0.06 + random-float 0.08))[ set cwd 1 ]]    ;female fawns other than full siblings, probability of infection 0.06-0.13
+                      [ if (random-float 1 < (0.13 + random-float 0.14))[ set cwd 1 ]]   ;male fawns other than full siblings, probability of infection 0.13-0.26
+                   ]
+                 ]
+               ]
             ]
-          if (tgroid >= 0)[                                         ; if the infected deer is a group member
-            let group-mem deers with [ groid = tgroid and who != ttmomid and cwd = 0 ]  ; uninfected group members other than mom
-            if any? group-mem [
-              ask group-mem [
-                ifelse (momid = ttmomid)                           ; siblings in group
-                [ if (sex = 2 and aim > 20 and aim < 25) [         ; 1/2 sibling female yearlings in group
-                  if (random-float 1 < 0.07)[                      ; probability of infection 0-0.06
-                    set cwd 1
-                    ]
-                  ]
-                  if (sex = 2 and aim > 24) [                      ; adult female 1/2 sibling in group
-                    if (random-float 1 < 0.07)[                    ; probability of infection 0-0.06
-                      set cwd 1
-                      ]
-                    ]
-                  ]
-                [ if (sex = 2 and aim > 20) [                      ; female yearlings and adults in group, except mom and 1/2 siblings
-                  if (random-float 1 < 0.07)[                      ; probability of infection 0-0.06
-                    set cwd 1
-                    ]
-                  ]
-                  if (aim < 13) [
-                    ifelse (sex = 2)
-                    [ if (random-float 1 < (0.06 + random-float 0.08))[    ;================================ female fawns other than full siblings, probability of infection 0.06-0.13
-                      set cwd 1
-                      ]
-                    ]
-                    [ if (random-float 1 < (0.13 + random-float 0.14))[    ;================================ male fawns other than full siblings, probability of infection 0.13-0.26
-                      set cwd 1
-                      ]
-                    ]
-                    ]
-                  ]
-                ]
-              ]
+         ]
 ;            let non-group-halfsib-neigh deers with [momid = ttmomid and sex = 2 and aim > 20 and aim < 25 and groid != tgroid and cwd = 0] in-radius 1.5   ;commented out 4Nov17
 ;            if any? non-group-halfsib-neigh [                             ; non-group yearling 1/2 sibling in the neighborhood
 ;              ask non-group-halfsib-neigh [
@@ -880,33 +722,27 @@ to cwd-progression
 ;                ]
 ;              ]
 ;            ]
-          ]
+;          ]
         if (d = 7)[                                                        ; male fawn 3 months old
-          let mom-deer deers with [ who = ttmomid and cwd = 0 ]              ; uninfected mom
-          if any? mom-deer [
-            ask mom-deer [
+          ask close-deers with [ who = lmom and cwd = 0 ] [             ; uninfected mom
               ;if (random-float 1 < (0.7 + random-float 0.2))[             ; probability of infection 1
               set cwd 1
               ;]
-              ]
-            ]
-          let fullsib deers with [momid = ttmomid and aim = 3 and cwd = 0]
-          if any? fullsib [
-            ask fullsib [
+          ]
+
+          ask close-deers with [momid = lmom and aim = 3 and cwd = 0][ ;full sibs in cohort
               ;if (random-float 1 < (0.4 + random-float 0.2))[             ; probability of infection 1
               set cwd 1
               ;]
-              ]
             ]
-          if (tgroid >= 0)[
-            let halfsib deers with [ momid = ttmomid and sex = 2 and aim = 15 and groid = tgroid and cwd = 0 ]
-            if any? halfsib [
-              ask halfsib [                                                 ; half siblings (yearlings) in group
+
+          if (lgroid >= 0)[ ;if in group
+            ask local-deers with [ momid = lmom and sex = 2 and aim = 15 and groid = lgroid and cwd = 0 ][
+                ; half siblings (f yearlings) in group
                 if (random-float 1 < (0.06 + random-float 0.08))[           ; probability of infection 0.06-0.13
                   set cwd 1
                   ]
-                ]
-              ]
+             ]
 ;            let halfsib-othergroup deers with [ momid = ttmomid and sex = 2 and aim = 15 and groid != tgroid and cwd = 0 ] in-radius 1.5
 ;            if any? halfsib-othergroup [
 ;              ask halfsib-othergroup [
@@ -916,56 +752,46 @@ to cwd-progression
 ;                ]
 ;              ]
             ]
-          ]
+        ]
+
         if (d > 7)[                                                         ; male fawn age 4 to 8 months
-          let mom-deer deers with [ who = ttmomid and cwd = 0 ]
-          if any? mom-deer [
-            ask mom-deer [                                                  ; to mom
-              if (d > 7 and d < 11)[
-                if (random-float 1 < (0.13 + random-float 0.14))[           ; probability of infection 0.13-0.26 (non-rut season)
-                  set cwd 1
-                  ]
-                ]
-              if (d > 10)[
-                if (random-float 1 < 0.07)[                                 ; probability of infection 0 - 0.07 (rut season)
-                  set cwd 1
-                  ]
-                ]
-              ]
+          ask close-deers with [ who = lmom and cwd = 0 ][                                              ; to mom
+            if (d > 7 and d < 11)[
+              if (random-float 1 < (0.13 + random-float 0.14))[ set cwd 1 ]          ; probability of infection 0.13-0.26 (non-rut season)
             ]
-          let fullsib deers with [ momid = ttmomid and aim < 13 and cwd = 0 ]
-          if any? fullsib [
-            ask fullsib [
-              ifelse (sex = 2)
-              [ if (d > 7 and d < 11) [
+            if (d > 10)[
+              if (random-float 1 < 0.07)[ set cwd 1 ]                                ; probability of infection 0 - 0.07 (rut season)
+            ]
+          ]
+
+          ask close-deers with [ momid = lmom and aim < 13 and cwd = 0 ][
+             ifelse (sex = 2)
+             [ if (d > 7 and d < 11) [
                 if (random-float 1 < (0.38 + random-float 0.27))[           ; female full sibling, probability of infection 0.38-0.64
                   set cwd 1
                 ]
-              ]
-              if (d > 10)[
+               ]
+               if (d > 10)[
                 if (random-float 1 < (0.06 + random-float 0.07))[           ; female full sibling, probability of infection 0.06-0.13
                   set cwd 1
                   ]
-                ]
-              ]
+                ]]
               [ if (d > 7 and d < 11)[
                 if (random-float 1 < (0.38 + random-float 0.27))[           ; prob of trans 0.38-0.64
                   set cwd 1
                 ]
-              ]
-              if (d > 10)[
-                if (random-float 1 < (0.13 + random-float 0.14))[           ; male full sibling, probability of infection 0.13-0.26
-                  set cwd 1
-                  ]
                 ]
-              ]
-              ]
-            ]
-          if (tgroid >= 0) [
-            let other-group-members deers with [ groid = tgroid and who != ttmomid and cwd = 0 ]
-            if any? other-group-members [
-              ask other-group-members [
-                ifelse (momid = ttmomid)
+                if (d > 10)[
+                  if (random-float 1 < (0.13 + random-float 0.14))[           ; male full sibling, probability of infection 0.13-0.26
+                    set cwd 1
+                    ]
+                  ]
+               ]
+          ]
+
+          if (groid >= 0) [
+            ask local-deers with [ groid = lgroid and who != lmom and cwd = 0 ][
+                ifelse (momid = lmom)
                 [ if (sex = 2 and aim > 15 and aim < 19) [                   ; 1/2 sibling female yearling in group non-rut period
                   if (random-float 1 < (0.06 + random-float 0.08))[         ; probability of infection 0.06-0.13
                     set cwd 1
@@ -988,7 +814,7 @@ to cwd-progression
                         ]
                       ]
                     ]
-                  ]
+                ]
                 [ if (sex = 2 and aim > 15 and aim < 19) [                 ; other female yearlings in group non-rut period
                   if (random-float 1 < (0.06 + random-float 0.08))[        ; probability of infection 0.06-0.13
                     set cwd 1
@@ -1062,11 +888,10 @@ to cwd-progression
 ;                ]
 ;              ]
 ;            ]
-          ]
         ]
     [ if (d < 10)[                                                        ; cwd+ is yearling or adult MALE      http://community.deergear.com/the-hunt/bachelor-group-behavior/
       ifelse (mgroid < 0)
-      [ let potgrm deers in-radius-nowrap 1.5 with [mgroid = -1 and cwd = 0]  ; yearling males in the neighborhood
+      [ let potgrm close-deers with [mgroid = -1 and cwd = 0]  ; yearling males in the neighborhood
         if any? potgrm [
           let count-potgrm 0
           ifelse (count potgrm > 6)
@@ -1079,8 +904,7 @@ to cwd-progression
             ]
           ]
         ]
-      [ set tmgroid mgroid
-        ask deers with [ mgroid = tmgroid and cwd = 0] [                   ; susceptible male deer in bachelor group
+      [ ask local-deers with [ mgroid = [mgroid] of myself and cwd = 0] [                   ; susceptible male deer in bachelor group
           if (random-float 1 < (0.38 + random-float 0.21))[                ; probability of infection 0.38-0.58
             set cwd 1
             ]
@@ -1091,13 +915,10 @@ to cwd-progression
     ]
     ;==========================================================FEMALE DEER===========================================================
     [ ifelse (aim >= 25)
-      [ set tmomid who
-        set tgroid groid
-        set ttmomid momid
-        set ttaim aim
-        let my-fawns deers with [ momid = tmomid and cwd = 0 ]               ; all SUSCEPTIBLE offspring of the infected female deer
-        if any? my-fawns in-radius 1.5 [
-          ask my-fawns in-radius 1.5 [
+      [ let lmom who
+        let lgroid groid
+        let lmymom momid
+        ask close-deers with [ momid = lmom and cwd = 0 ][               ; all SUSCEPTIBLE offspring of the infected female deer
           if (aim = 3)[                                                      ; probability of infection fawns 3 months of age 0.77 to 1
             if (random-float 1 < (0.77 + random-float 0.24))[
               set cwd 1
@@ -1145,7 +966,7 @@ to cwd-progression
             ]
           ]
           if (aim > 12 and aim < 25 and sex = 2)[                                ; only FEMALE yearlings
-            ifelse (tgroid >= 0 and groid = tgroid)                              ; infected female is a group member, and her yearling daughter is in the same group
+            ifelse (lgroid >= 0 and groid = lgroid)                              ; infected female is a group member, and her yearling daughter is in the same group
             [ if (d = 11 or d = 12)[                                             ; rut
               if (random-float 1 < .07) [
                 set cwd 1
@@ -1163,19 +984,19 @@ to cwd-progression
             ]
           ]
           if (d < 5 and d > 6)[                                                   ; except during the peri-parturient period
-            if (tgroid >= 0)[
-              if (aim > 24 and sex = 2 and groid = tgroid)[                       ; adult female offspring who are group members
+            if (lgroid >= 0)[
+              if (aim > 24 and sex = 2 and groid = lgroid)[                       ; adult female offspring who are group members
                 if (random-float 1 < 0.14)[                                       ; probability of infection 0-0.13
                   set cwd 1
                   ]
                 ]
-              if (aim > 24 and sex = 2 and groid != tgroid)[                      ; infected mom is a group member, but the adult offspring is not
+              if (aim > 24 and sex = 2 and groid != lgroid)[                      ; infected mom is a group member, but the adult offspring is not
                 if (random-float 1 < 0.07)[                                       ; probability of infection 0-0.06
                   set cwd 1
                   ]
                 ]
               ]
-            if (tgroid = -1)[                                                    ; infected mom is solitary
+            if (lgroid = -1)[                                                    ; infected mom is solitary
               if (aim > 24 and sex = 2)[                                         ; susceptible adult offspring is in the neighborhood
                 if (random-float 1 < 0.07 )[                                     ; probability of infection 0-0.06
                   set cwd 1
@@ -1184,12 +1005,9 @@ to cwd-progression
               ]
             ]
           ]
-        ]
         if (d < 5 and d > 6)[                                                    ; except during the periparturient period
-          let my-mom deers with [ who = ttmomid and cwd = 0 ]
-          if any? my-mom in-radius 1.5[
-            ask my-mom in-radius 1.5 [
-              ifelse (groid >= 0 and groid = tgroid)                             ; susceptible mom in the same group as that of the infected female
+          ask close-deers with [ who = lmymom and cwd = 0 ][
+            ifelse (groid >= 0 and groid = lgroid)                             ; susceptible mom in the same group as that of the infected female
               [ if (random-float 1 < 0.14)[                                      ; probability of infection 0-0.13
                 set cwd 1
                 ]
@@ -1197,13 +1015,10 @@ to cwd-progression
               [ if (random-float 1 < 0.07)[                                       ; probability of infection 0-0.06
                 set cwd 1
                 ]
-                ]
               ]
             ]
-          if (tgroid >= 0)[
-            let other-group-members deers with [ groid = tgroid and cwd = 0 and who != ttmomid and momid != tmomid ]
-            if any? other-group-members [
-              ask other-group-members [
+          if (groid >= 0)[
+            ask local-deers with [ groid = lgroid and cwd = 0 and who != lmymom and momid != lmom ][
                 if (sex = 2) [
                   if (random-float 1 < (0.06 + random-float 0.08))[                ; probability of infection to other group members (excluding offspring and mom) 0.06 to 0.13
                     set cwd 1
@@ -1222,11 +1037,8 @@ to cwd-progression
                   ]
                 ]
               ]
-              ]
-            ]
-          let neighboring-group-members deers with [ groid != tgroid and groid >= 0 and cwd = 0 and who != ttmomid and momid != tmomid ] in-radius 1.5
-            if any? neighboring-group-members [
-              ask neighboring-group-members [
+          ]
+          ask close-deers with [ groid != lgroid and groid >= 0 and cwd = 0 and who != lmymom and momid != lmom ][
                 ifelse (d = 10 or d = 11)
                 [ if random-float 1 < 0.14[                                         ;18Nov17 changed from 0.06-0.13 to < 0.14
                   set cwd 1
@@ -1236,22 +1048,19 @@ to cwd-progression
                   set cwd 1
                   ]
                 ]
-                ]
               ]
             ]
         ]
         ;----------------------------------------------------Adult female END----------------------------------------------
         [ ifelse (aim > 12)                                                          ; if cwd+ is yearling female
-          [ set tmomid who
-          set tgroid groid
-          set ttmomid momid
-          set ttaim aim
-          let my-fawns deers with [ momid = tmomid and cwd = 0 ]                      ; all SUSCEPTIBLE offspring of the infected yearling female
-          if any? my-fawns in-radius 1.5 [
-            ask my-fawns in-radius 1.5 [
-            if (aim = 3)[                                                             ; probability of infection fawns 3 mo
-              if (random-float 1 < (0.77 + random-float 0.24))[
-                set cwd 1
+          [ let lmom who
+            let lgroid groid
+            let lmymom momid
+            let laim aim
+            ask close-deers with [ momid = lmom and cwd = 0 ][                      ; all SUSCEPTIBLE offspring of the infected yearling female
+              if (aim = 3)[                                                             ; probability of infection fawns 3 mo
+                if (random-float 1 < (0.77 + random-float 0.24))[
+                  set cwd 1
               ]
               ]
             if (aim <= 2)[
@@ -1296,12 +1105,9 @@ to cwd-progression
                 ]
               ]
             ]
-          ]
           if (d < 5 and d > 6)[
-            let my-mom deers with [ who = ttmomid and cwd = 0 ]
-            if any? my-mom in-radius 1.5[
-              ask my-mom in-radius 1.5 [
-                ifelse (groid >= 0 and groid = tgroid)                                ; susceptible mom in the same group as that of the infected yearling
+            ask close-deers with [ who = lmymom and cwd = 0 ][
+                ifelse (groid >= 0 and groid = lgroid)                                ; susceptible mom in the same group as that of the infected yearling
                 [ if (random-float 1 < (0.13 + random-float 0.14))[                   ; probability of infection 0.13-0.26
                   set cwd 1
                   ]
@@ -1309,15 +1115,12 @@ to cwd-progression
                 [ if (random-float 1 < 0.14)[                                          ; probability of infection 0-0.13
                   set cwd 1
                   ]
-                  ]
                 ]
               ]
-            if (tgroid >= 0)[
-              let other-group-members deers with [ groid = tgroid and cwd = 0 and who != ttmomid and momid != tmomid ]
-              if any? other-group-members [
-                ask other-group-members [
-                  ifelse (aim = ttaim)
-                  [ ifelse (momid = ttmomid)
+            if (groid >= 0)[
+              ask local-deers with [ groid = lgroid and cwd = 0 and who != lmymom and momid != lmom ][
+                  ifelse (aim = laim)
+                  [ ifelse (momid = lmymom)
                     [ if (d = 11 or d = 12)[                                            ; rut
                       if (random-float 1 < 0.07)[                                       ; full sibling yearling in group during rut
                         set cwd 1
@@ -1337,12 +1140,9 @@ to cwd-progression
                   [ if (random-float 1 < (0.06 + random-float 0.08))[                   ; probability of infection to other group members (excluding offspring, yearlings/siblings and mom) 0.6-0.13
                     set cwd 1
                     ]
-                    ]
                   ]
                 ]
-              let neighboring-group-members deers with [ groid != tgroid and groid >= 0 and cwd = 0 and who != ttmomid and momid != tmomid ] in-radius 1.5
-              if any? neighboring-group-members [
-                ask neighboring-group-members [
+              ask close-deers with [ groid != lgroid and groid >= 0 and cwd = 0 and who != lmymom and momid != lmom ][
                   if (d > 10)[
                     if (random-float 1 < 0.14)[                                         ; 18Non17 0.06-0.13 changed to 0 to 0.13
                       set cwd 1
@@ -1353,56 +1153,40 @@ to cwd-progression
                       set cwd 1
                     ]
                   ]
-                  ]
                 ]
               ]
-            if (tgroid < 0)[                                                         ; if infected yearling is solitary
-              let sibling-yearlings-in-neighborhood deers with [ momid = ttmomid and sex = 2 and aim = ttaim and cwd = 0 ] in-radius 1.5
-              if any? sibling-yearlings-in-neighborhood [                            ; sibling of infected solitary yearling in neighborhood
-                ask sibling-yearlings-in-neighborhood[
+            if (groid < 0)[                                                         ; if infected yearling is solitary
+              ask close-deers with [ momid = lmymom and sex = 2 and aim = laim and cwd = 0 ][ ; sibling of infected solitary yearling in neighborhood
                   if (random-float 1 < 0.14)[                                        ; probability of infection 0 to 0.13
                     set cwd 1
                   ]
                 ]
               ]
-              ]
           ]
         ]
         ;----------------------------------------------------------- YEARLING FEMALE END
         ;----------------------------------------------------------- FAWN FEMALE BEGIN
-        [ set tmomid who
-          set tgroid groid
-          set ttmomid momid
-          set ttaim aim
+        [ let lmom who
+          let lgroid groid
+          let lmymom momid
+          let laim aim
           if (d <= 4)[
-            let mom-deer deers with [ who = ttmomid and cwd = 0 ]
-            if any? mom-deer [
-              ask mom-deer [                                                         ; mom infected with a probability of 13-26%
-                if (random-float 1 < (0.13 + random-float 0.14))[
-                  set cwd 1
-                  ]
-                ]
-              ]
-            let fullsibs deers with [ momid = ttmomid and aim < 13 and cwd = 0 ]
-            if any? fullsibs with [ sex = 2 ][
-              ask fullsibs with [ sex = 2 ][                                          ; fullsib females infected with a probability of 13-26%
-                if (random-float 1 < (0.13 + random-float 0.14))[
-                  set cwd 1
-                  ]
-                ]
-              ]
-            if any? fullsibs with [ sex = 1 ][
-              ask fullsibs with [ sex = 1 ][
-                if (random-float 1 < (0.06 + random-float 0.08))[
+            ask close-deers with [ who = lmom and cwd = 0 ][
+                if (random-float 1 < (0.13 + random-float 0.14))[; mom infected with a probability of 13-26%
                   set cwd 1
                 ]
-              ]
             ]
-            if (tgroid >= 0)[
-              let other-groupmembers deers with [ groid = tgroid and who != ttmomid and cwd = 0 ]
-              if any? other-groupmembers [
-                ask other-groupmembers [
-                  ifelse (momid = ttmomid)
+            ask close-deers with [ momid = lmymom and aim < 13 and cwd = 0 ][
+              ifelse sex = 2
+              [ if (random-float 1 < (0.13 + random-float 0.14))[ ; fullsib females infected with a probability of 13-26%
+                  set cwd 1 ]]
+              [ if (random-float 1 < (0.06 + random-float 0.08))[ ;fullsib males
+                  set cwd 1 ]]
+            ]
+
+            if (lgroid >= 0)[
+              ask local-deers with [ groid = lgroid and who != lmymom and cwd = 0 ][
+                  ifelse (momid = lmymom)
                   [if (sex = 2 and aim > 20 and aim < 25) [                            ; 1/2 sibling yearling in group probability of inf 6%-13
                       if (random-float 1 < (0.06 + random-float 0.08))[
                         set cwd 1
@@ -1433,8 +1217,8 @@ to cwd-progression
                         ]
                       ]
                     ]
-                  ]
                 ]
+            ]
 ;              let nongroup-siblings deers with [ momid = ttmomid and sex = 2 and aim > 20 and aim < 25 and groid != tgroid and cwd = 0 ] in-radius 1.5
 ;              if any? nongroup-siblings [                                               ; non-group yearling 1/2 sibling in the neighborhood
 ;                ask nongroup-siblings [
@@ -1443,21 +1227,18 @@ to cwd-progression
 ;                    ]
 ;                  ]
 ;                ]
-              let nongroup-adults deers with [ sex = 2 and aim > 25 and groid != tgroid and cwd = 0 ] in-radius 1.5
-              if any? nongroup-adults [                                                  ; non-group adults in the neighborhood
-                ask nongroup-adults [
-                  if (d = 11 or d = 12)[
-                    if (random-float 1 < 0.07)[                                          ; 18Nov17 0.06-0.10 changed to 0-0.07
-                      set cwd 1
-                    ]
-                  ]
+;              ask deers in-radius-nowrap 1.5 with [ sex = 2 and aim > 25 and groid != lgroid and cwd = 0 ] ; non-group adults in the neighborhood
+;                  if (d = 11 or d = 12)[ ;this is impossible
+;                    if (random-float 1 < 0.07)[                                          ; 18Nov17 0.06-0.10 changed to 0-0.07
+;                      set cwd 1
+;                    ]
+;                  ]
 ;                  if (d < 11)[
 ;                    if (random-float 1 < 0.07)[
 ;                      set cwd 1
 ;                      ]
 ;                  ]
-                  ]
-                ]
+;                  ]
 ;              ]
 ;            [ let halfsibs deers with [ momid = ttmomid and sex = 2 and aim > 20 and aim < 25 and cwd = 0]  in-radius 1.5
 ;              if any? halfsibs [                                                        ; fawn with solitary mother transmission to yearling 1/2 sibling in the neighborhood
@@ -1468,33 +1249,25 @@ to cwd-progression
 ;                  ]
 ;                ]
 ;              ]
-            ]
+;            ]
           ]
           if (d = 7)[
-            let mom-deer deers with [ who = ttmomid and cwd = 0 ]
-            if any? mom-deer [
-              ask mom-deer [
+            ask close-deers with [ who = lmymom and cwd = 0 ][
                 ;if (random-float 1 < (.7 + random-float .2))[
                   set cwd 1
                 ;]
               ]
-            ]
-            let fullsibs deers with [ momid = ttmomid and aim = 3 and cwd = 0 ]
-            if any? fullsibs [
-              ask fullsibs [
+            ask close-deers with [ momid = lmymom and aim = 3 and cwd = 0 ][ ;fullsibs
                 ;if (random-float 1 < (.4 + random-float .2))[
                   set cwd 1
                 ;]
-              ]
             ]
-            if (tgroid >= 0)[
-              let halfsibs deers with [ momid = ttmomid and sex = 2 and aim = 15 and groid = tgroid and cwd = 0 ]
-              if any? halfsibs [
-                ask halfsibs [                                                                ; yearling female halfsib in group 6-13%
+
+            if (lgroid >= 0)[
+              ask close-deers with [ momid = lmymom and sex = 2 and aim = 15 and groid = lgroid and cwd = 0 ][ ;halfsib sisters                                                         ; yearling female halfsib in group 6-13%
                   if (random-float 1 < (0.06 + random-float 0.08))[
                     set cwd 1
                   ]
-                ]
               ]
 ;              let nongroup-halfsibs deers with [ momid = ttmomid and sex = 2 and aim = 15 and groid != tgroid and cwd = 0 ] in-radius 1.5
 ;              if any? nongroup-halfsibs [
@@ -1507,9 +1280,7 @@ to cwd-progression
             ]
           ]
           if (d > 7)[
-            let mom-deer deers with [ who = ttmomid and cwd = 0 ]
-            if any? mom-deer [
-              ask mom-deer [
+            ask close-deers with [ who = lmymom and cwd = 0 ][ ;mother deer
                 if (d = 11 or d = 12)[
                   if (random-float 1 < (0.06 + random-float 0.08))[
                     set cwd 1
@@ -1520,11 +1291,8 @@ to cwd-progression
                     set cwd 1
                     ]
                   ]
-                ]
-              ]
-            let fullsiblings deers with [ momid = ttmomid and aim < 13 and cwd = 0 ]
-            if any? fullsiblings [
-              ask fullsiblings [
+            ]
+            ask close-deers with [ momid = lmymom and aim < 13 and cwd = 0 ][ ;fullsibs
                 if (sex = 1)[
                   if (aim > 3 and aim < 7)[
                     if (random-float 1 < (0.38 + random-float 0.29))[
@@ -1548,13 +1316,10 @@ to cwd-progression
                       set cwd 1
                       ]
                     ]
-                  ]
                 ]
               ]
-            if (tgroid >= 0)[
-              let halfsibs deers with [ groid = tgroid and who != ttmomid and cwd = 0 ]
-              if any? halfsibs [
-                ask halfsibs [
+            if (lgroid >= 0)[
+              ask local-deers with [ groid = lgroid and who != lmymom and cwd = 0 ][ ;half-sibs
                   ;ifelse (momid = ttmomid)
                   if (sex = 2 and aim > 15 and aim < 21) [                                           ; 1/2 sibling yearling in group
                     if (d = 11 or d = 12)[
@@ -1579,9 +1344,7 @@ to cwd-progression
                         set cwd 1
                         ]
                       ]
-                    ]
                   ]
-              ]
 ;                  [ if (sex = 2 and aim > 20) [                                                       ; females, yearlings and adults, except mom and 1/2 siblings
 ;                      if (random-float 1 < (0.2 + random-float 0.1))[
 ;                        set cwd 1
@@ -1626,7 +1389,7 @@ to cwd-progression
 ;                  ]
 ;                ]
 ;                ]
-;              ]
+              ]
             ]
           ]
         ;=============================================================================================FAWN FEMALE END
@@ -1639,9 +1402,9 @@ to deer-reproduce
   ifelse (aim < 13.5)
   [ hatch-deers 1 [
     set aim 1
-    set shape "deer"
-    set color orange
-    set size 1.5
+    ;set shape "deer"
+    ;set color orange
+    ;set size 1.5
     set gl 0
     set cwd 0
     set cwdm 20 + random 6
@@ -1658,9 +1421,9 @@ to deer-reproduce
     ]
   [ hatch-deers 2 [
     set aim 1
-    set shape "deer"
-    set color orange
-    set size 1.5
+    ;set shape "deer"
+    ;set color orange
+    ;set size 1.5
     set gl 0
     set cwd 0
     set cwdm 20 + random 6
@@ -1761,27 +1524,27 @@ to finalize-home-patch
     ]
     ]
 end
+
 to new-group-formation
-  set tgroid groid
+  let lgroid groid
   set groid -1
-  set ttgroid who
-  set tgr 0
-  let my-fawns deers with [ momid = ttgroid and aim = 1 ]
-  if any? my-fawns [
-    ask my-fawns [
-      set gr -2
-      set groid -1
-      set tgr (tgr + 1)
-    ]
-    ]
   set gr -2
-  ask deer tgroid[
-    set gr (gr - (tgr + 1))
+  let lgr 0
+  ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim = 1 ][
+     set gr -2
+     set groid -1
+     set lgr (lgr + 1)
+   ]
+
+  ask deer lgroid[
+    set gr (gr - (lgr + 1))
     ]
 end
+
 to deer-die-CWD
-  set tgroid groid
-  if (sex = 2)[ set twho who ]
+  let lgroid groid
+  let lwho who
+
   ;----------------------------------------------------------------- fawns upto 6 months
   ifelse (aim < 6.5)
   [ ifelse (sex = 1)
@@ -1823,45 +1586,12 @@ to deer-die-CWD
           ]
           die
         ]
-        [ let my-fawns deers with [ momid = twho and aim < 2.5 ]
-          if any? my-fawns [
-           ask my-fawns [
+        [ ask deers in-radius-nowrap 1.5 with [ momid = lwho and aim < 2.5 ][ ;my fawns
               set counter1 counter1 + 1
               die
           ]
-          ]
           ifelse (gl > 0)
-          [ let adult-groupmembers deers with [ groid = tgroid and gl = 0 and sex = 2 and aim >= 18 ]
-            ifelse (count adult-groupmembers > 0)
-            [ ask n-of 1 adult-groupmembers [
-              set ttgroid who
-              set gl 1
-              set groid ttgroid
-              let group-members deers with [ groid = tgroid and gl = 0 ]
-              if (count group-members > 0)[
-                ask group-members [ set groid ttgroid ]
-              ]
-              set gr (count deers with [ groid = ttgroid and gl = 0 ])
-            ]
-            ]
-            [ let group-leaders-here deers with [ gl = 1 and groid != tgroid and gr < 3 ]
-              ifelse (count group-leaders-here > 0)
-              [ ask n-of 1 group-leaders-here [
-                set ttgroid groid
-                let transfer-deers deers with [ groid = tgroid and gl = 0 ]
-                set gr (gr + count transfer-deers)
-                ]
-                let group-members deers with [ groid = tgroid and gl = 0 ]
-                ask group-members [ set groid ttgroid ]
-                ]
-              [ let group-members deers with [ groid = tgroid and gl = 0 ]
-                ask group-members [
-                  set gr -2
-                  set groid -1
-                  ]
-                ]
-              set n_leaders_lost (n_leaders_lost + 1)
-            ]
+          [ new-group-leader
             ]
           [ if (gr = -1)[
             review-group-dynamics
@@ -1874,62 +1604,18 @@ to deer-die-CWD
       ;----------------------------------------------------------------------- male 25 to 240 and more than 240
       [ ifelse (sex = 1)
         [ if (ml = 1)[
-          set tmgroid mgroid
-          let bgroup-members deers with [ mgroid = tmgroid ]
-          ask bgroup-members [ set mgroid -1 ]
+          let lmgroid mgroid
+          ask deers in-radius-nowrap 3 with [mgroid = lmgroid] [ set mgroid -1 ]
           ]
           die
         ]
         ;--------------------------------------------------------------------- female 25 to 240
-        [ let my-fawns deers with [ momid = twho and aim < 2.5 ]
-          if any? my-fawns [
-           ask my-fawns [
-              set counter1 counter1 + 1
-              die
-              ]
-            ]
+        [ ask deers in-radius-nowrap 1.5 with [ momid = lwho and aim < 2.5 ][
+             set counter1 counter1 + 1
+             die
+          ]
           ifelse (gl > 0)
-          [ let group-members deers with [ groid = tgroid and aim > 18 and sex = 2 and gl = 0 ]
-            let zz (count group-members)
-            ifelse (zz > 0)
-            [ ifelse (any? group-members with [ aim > 29 ])
-              [ ask n-of 1 group-members with [ aim > 29 ][
-                set gl 1
-                set ttgroid who
-                set groid ttgroid
-                let old-group deers with [ groid = tgroid and gl = 0 ]
-                ask old-group [ set groid ttgroid ]
-                let new-group deers with [ groid = ttgroid and gl = 0 ]
-                set gr (count new-group)
-                ]
-                ]
-              [ ask n-of 1 group-members [
-                set gl 1
-                set ttgroid who
-                set groid ttgroid
-                let old-group deers with [ groid = tgroid and gl = 0 ]
-                ask old-group [ set groid ttgroid ]
-                let new-group deers with [ groid = ttgroid and gl = 0 ]
-                set gr (count new-group)
-                ]
-                ]
-              ]
-            [ let other-group-leaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-              let old-group deers with [ groid = tgroid and gl = 0 ]
-              ifelse (count other-group-leaders-here > 0)
-              [ ask n-of 1 other-group-leaders-here [
-                set ttgroid groid
-                set gr (gr + count old-group)
-                ]
-                ask old-group [ set groid ttgroid ]
-                ]
-              [ ask old-group [
-                set gr -2
-                set groid -1
-                ]
-                ]
-              set n_leaders_lost (n_leaders_lost + 1)
-              ]
+          [ new-group-leader
             ]
           [ if (gr = -1)[
             review-group-dynamics
@@ -1943,270 +1629,116 @@ to deer-die-CWD
     ]
 end
 to deer-die
-  set tgroid groid
-  if (sex = 2)[
-    set twho who
-    ]
+
+  let rn precision (random-float 1) 3
+
   ;------------------------------------------------------------- fawns upto 6 months
-  ifelse (aim < 6.5)
-  [ ifelse (sex = 1)
-    [if precision (random-float 1) 3 < mf6nhm [
-      set counter1 0
-      if (gr = -1)[
-        review-group-dynamics
-      ]
+  ifelse (aim < 6.5)[
+
+    let lmort mf6nhm
+    if(sex = 2)[set lmort ff6nhm]
+    if rn < lmort [
+      if (gr = -1)[review-group-dynamics]
       die
-      ]
     ]
-    [ if precision (random-float 1) 3 < ff6nhm [
-      set counter1 0
-      if (gr = -1)[
-        review-group-dynamics
-      ]
-      die
-      ]
-    ]
-    ]
+  ]
+
   ;---------------------------------------------------------------  7 to 12 months
-  [ ifelse (aim < 12.5)
-    [ ifelse (sex = 1)
-      [ if random-float 1 < mf12nhm [
-        set counter1 0
-        if (gr = -1)[
-          review-group-dynamics
-          ]
-        die
-        ]
-        ]
-      [ if random-float 1 < ff12nhm [
-        set counter1 0
-        if (gr = -1)[
-          review-group-dynamics
-        ]
-        die
-        ]
-      ]
-      ]
+  [ ifelse (aim < 12.5)[
+
+    let lmort mf12nhm
+    if (sex = 2)[ set lmort ff12nhm ]
+    if rn < lmort [
+      if (gr = -1)[review-group-dynamics]
+      if (sex = 1 and mgroid > 0)[review-bachelor-group]
+      die
+    ]
+  ]
+
     ;------------------------------------------------------------- 13 to 24
-    [ ifelse (aim < 24.5)
-      [ ifelse (sex = 1)
-        [ if random-float 1 < mynhm [
-          set counter1 0
-          if (gr = -1)[
-            review-group-dynamics
-          ]
+  [ ifelse (aim < 24.5) [
+
+    ifelse (sex = 1)[
+      if rn < mynhm [
+          if (gr = -1)[review-group-dynamics]
+          if (mgroid > 0)[review-bachelor-group]
           die
-          ]
-          ]
-        [ if random-float 1 < fynhm [
-            if any? deers with [ momid = twho and aim < 2.5 ][
-              let my-fawns deers with [ momid = twho and aim < 2.5 ]
-              ask my-fawns [
-                set counter1 counter1 + 1
-                die
-              ]
-            ]
-          ifelse (gl > 0)
-          [ let pot-groupleaders deers with [ groid = tgroid and gl = 0 and sex = 2 and aim >= 18 ]           ; turtle procedure: if a doe social group leader dies, leadership is transferred or the group breaks down
-            ifelse (count pot-groupleaders > 0)
-            [ ask one-of pot-groupleaders [
-              set ttgroid who
-              set gl 1
-              set groid ttgroid
-              let transfer-group deers with [ groid = tgroid and gl = 0 ]
-              if (count transfer-group > 0)[
-                ask transfer-group [ set groid ttgroid ]
-                ]
-              let new-group deers with [ groid = ttgroid and gl = 0 ]
-              set gr (count new-group)
-              ]
-            ]
-            [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-              ifelse (count other-groupleaders-here > 0)
-              [ ask one-of other-groupleaders-here [
-                set ttgroid groid
-                let transfer-deers deers with [ groid = tgroid and gl = 0 ]
-                set gr (gr + count transfer-deers)
-                ]
-                let new-group deers with [ groid = tgroid and gl = 0 ]
-                ask new-group [ set groid ttgroid ]
-                ]
-              [ let group-members deers with [ groid = tgroid and gl = 0 ]
-                ask group-members [
-                  set gr -2
-                  set groid -1
-                  ]
-                ]
-              set n_leaders_lost (n_leaders_lost + 1)
-              ]
-            ]
-          [ if (gr = -1)[
-            review-group-dynamics
-            ]
-            ]
-          set counter1 0
-          die
-          ]
-          ]
         ]
-      ;--------------------------------------------------------------- male 25 to 240 and more than 240
-      [ ifelse (sex = 1)
-        [ ifelse (aim < 240)
-          [ if random-float 1 < precision (manhm - oldm) 3 [
-              if (ml = 1)[
-                set tmgroid mgroid
-                let my-group deers with [ mgroid = tmgroid ]
-                ask my-group [
-                  set mgroid -1
-                ]
-              ]
+      ]
+
+    [ if rn < fynhm [
+        ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][
+          review-group-dynamics
+          die
+        ]
+        ifelse (gl > 0)[ new-group-leader ][ if (gr = -1) [review-group-dynamics] ]
+        die
+       ]
+     ]
+   ]
+   ;--------------------------------------------------------------- male 25 to 240 and more than 240
+  [ ifelse (sex = 1)
+        [ let lmort 0.8
+          if aim < 240 [ set lmort precision (manhm - oldm) 3 ]
+          if rn < lmort [
+            ifelse ml = 1
+            [ask deers with [ mgroid = [groid] of myself ][set mgroid -1]]
+            [review-bachelor-group]
+            die
+          ]
+         ]
+
+   ;------------------------------------------------------------------- female 25 to 240
+        [ let lmort 0.8
+          if aim < 240 [ set lmort precision (fanhm - oldf) 3 ]
+          if rn < lmort [
+            ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][
+              review-group-dynamics
               die
             ]
-          ]
-          [ if random-float 1 < .8 [
-            if (ml = 1)[
-              set tmgroid mgroid
-              let my-group deers with [ mgroid = tmgroid ]
-              ask my-group [
-                set mgroid -1
-                ]
-              ]
+            ifelse (gl > 0)[ new-group-leader ][ if (gr = -1)[review-group-dynamics] ]
             die
-            ]
-            ]
-          ]
-        ;------------------------------------------------------------------- female 25 to 240
-        [ ifelse (aim < 240)
-          [ if random-float 1 < precision (fanhm - oldf) 3 [
-            let my-fawns deers with [ momid = twho and aim < 2.5 ]
-            if (count my-fawns > 0)[
-              ask my-fawns [
-                set counter1 counter1 + 1
-                die
-                ]
-              ]
-            ifelse (gl > 0)
-            [ let pot-groupleaders deers with [ groid = tgroid and aim > 18 and sex = 2 and gl = 0 ]
-              let zz count pot-groupleaders
-              ifelse (zz > 0)
-              [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-                [ ask one-of pot-groupleaders with [ aim > 29 ] [
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                [ ask one-of pot-groupleaders [
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                ]
-              [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-                ifelse (count other-groupleaders-here > 0)
-                [ ask one-of other-groupleaders-here [
-                  set ttgroid groid
-                  let add-deers deers with [ groid = tgroid and gl = 0 ]
-                  set gr (gr + count add-deers)
-                  ]
-                  let new-group deers with [ groid = tgroid and gl = 0 ]
-                  ask new-group [
-                    set groid ttgroid
-                    ]
-                  ]
-                [ let group-members deers with [ groid = tgroid and gl = 0 ]
-                  ask group-members[
-                    set gr -2
-                    set groid -1
-                    ]
-                  ]
-                set n_leaders_lost (n_leaders_lost + 1)
-                ]
-              ]
-            [ if (gr = -1)[
-              review-group-dynamics
-              ]
-            ]
-            set counter1 0
-            die
-            ]
-          ]
-          ;-------------------------------------------------------------------- female 240 and more
-          [ if random-float 1 < .8 [
-            if any? deers with [ momid = twho and aim < 2.5 ][
-              let my-fawns deers with [ momid = twho and aim < 2.5 ]
-              ask my-fawns [
-                set counter1 counter1 + 1
-                die
-                ]
-              ]
-            ifelse (gl > 0)
-            [ let pot-groupleaders deers with [ groid = tgroid and aim > 18 and sex = 2 and gl = 0 ]
-              let zz count pot-groupleaders
-              ifelse (zz > 0)
-              [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-                [ ask one-of pot-groupleaders with [ aim > 29 ][
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                [ ask one-of pot-groupleaders [
-                  set gl 1
-                  set ttgroid who
-                  set groid ttgroid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [ set groid ttgroid ]
-                  let new-group deers with [ groid = ttgroid and gl = 0 ]
-                  set gr (count new-group)
-                  ]
-                  ]
-                ]
-              [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-                ifelse (count other-groupleaders-here > 0)
-                [ ask one-of other-groupleaders-here [
-                  set ttgroid groid
-                  let my-group deers with [ groid = tgroid and gl = 0 ]
-                  set gr (gr + count my-group)
-                  ]
-                  let new-group deers with [ groid = tgroid and gl = 0 ]
-                  ask new-group [ set groid ttgroid ]
-                  ]
-                [ let my-group deers with [ groid = tgroid and gl = 0 ]
-                  ask my-group [
-                    set gr -2
-                    set groid -1
-                    ]
-                  ]
-                set n_leaders_lost (n_leaders_lost + 1)
-                ]
-              ]
-            [ if (gr = -1)[
-              review-group-dynamics
-              ]
-            ]
-            set counter1 0
-            die
-            ]
           ]
         ]
       ]
     ]
   ]
+
 end
+;============================================================
+
+to new-group-leader
+
+ let lgroid groid
+ let ngroid -1
+
+ let my-group deers in-radius-nowrap 3 with [ groid = lgroid and who != lgroid]
+
+ let pot-groupleaders my-group with [ aim > 18 and sex = 2 ]
+
+ ifelse (any? pot-groupleaders)
+  [ ifelse (any? pot-groupleaders with [ aim > 29 ])
+    [ set ngroid ([who] of one-of pot-groupleaders with [aim > 29])]
+    [ set ngroid ([who] of one-of pot-groupleaders) ]]
+  [ let other-groupleaders-here deers-here with [ gl = 1 and gr < 3 and who != lgroid ]
+    if (any? other-groupleaders-here)
+    [ set ngroid ([who] of one-of other-groupleaders-here) ]
+  ]
+
+  ifelse ngroid = -1
+  [ ask my-group [set gr -2 set groid -1 ] ]
+  [ ask deer ngroid [
+      set gl 1
+      if gr < 0 [set gr 0]
+      set gr (gr + count my-group)
+    ]
+    ask my-group [ set groid ngroid ]
+  ]
+
+  set n_leaders_lost (n_leaders_lost + 1)
+
+end
+
 ;============================================================
 to hunting-mortality-mf12
   if (gr = -1)[
@@ -2225,7 +1757,7 @@ to hunting-mortality-mf12
       set tfmt-sr tfmt-sr + 1
     ]
     die
-    ]
+  ]
   [ if (cwd = 1)[
     set dcwdmf (dcwdmf + 1)
     ]
@@ -2266,9 +1798,9 @@ to hunting-mortality-ff12
     if [ trialL ] of patch-here = 1 [    ;##11Mar18
       set tfafh-sr tfafh-sr + 1
       set tfft-sr tfft-sr + 1
-      ]
-    die
     ]
+    die
+  ]
   [if (cwd = 1)[
     set dcwdff (dcwdff + 1)
     ]
@@ -2305,7 +1837,7 @@ to hunting-mortality-my
     if [ trialL ] of patch-here = 1 [ ;##11Mar18
       set tymh-sr tymh-sr + 1
       set tymt-sr tymt-sr + 1
-      ]
+    ]
     die
     ]
   [ if (cwd = 1)[
@@ -2335,38 +1867,7 @@ to hunting-mortality-my-sr
 end
 to hunting-mortality-fy
   ifelse (gl > 0)
-  [ let pot-groupleaders deers with [ groid = tgroid and gl = 0 and sex = 2 and aim > 18 ]
-    ifelse (count pot-groupleaders > 0)
-    [ ask one-of pot-groupleaders [
-      set ttgroid who
-      set gl 1
-      set groid ttgroid
-      let transfer-group deers with [ groid = tgroid and gl = 0 ]
-      let xgr count transfer-group
-      ask transfer-group [ set groid ttgroid ]
-      set gr xgr
-      ]
-      ]
-    [ let other-groupleaders-here deers with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-        set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xgr count transfer-group
-        set gr (gr + xgr)
-        ]
-        let new-group deers with [ groid = tgroid and gl = 0 ]
-        ask new-group [ set groid ttgroid ]
-        ]
-      [ let group-members deers with [ groid = tgroid and gl = 0 ]
-        ask group-members [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  [ new-group-leader]
   [ if (gr = -1)[
     set counter1 0
     review-group-dynamics
@@ -2384,7 +1885,7 @@ to hunting-mortality-fy
      set tyft-sr tyft-sr + 1
     ]
     die
-    ]
+  ]
   [if (cwd = 1)[
     set dcwdfy (dcwdfy + 1)
     ]
@@ -2395,38 +1896,7 @@ to hunting-mortality-fy
 end
 to hunting-mortality-fy-sr
   ifelse (gl > 0)
-  [ let pot-groupleaders deers with [ groid = tgroid and gl = 0 and sex = 2 and aim > 18 ]
-    ifelse (count pot-groupleaders > 0)
-    [ ask one-of pot-groupleaders [
-      set ttgroid who
-      set gl 1
-      set groid ttgroid
-      let transfer-group deers with [ groid = tgroid and gl = 0 ]
-      let xgr count transfer-group
-      ask transfer-group [ set groid ttgroid ]
-      set gr xgr
-      ]
-      ]
-    [ let other-groupleaders-here deers with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-        set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xgr count transfer-group
-        set gr (gr + xgr)
-        ]
-        let new-group deers with [ groid = tgroid and gl = 0 ]
-        ask new-group [ set groid ttgroid ]
-        ]
-      [ let group-members deers with [ groid = tgroid and gl = 0 ]
-        ask group-members [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  [ new-group-leader]
   [ if (gr = -1)[
     set counter1 0
     review-group-dynamics
@@ -2446,10 +1916,11 @@ to hunting-mortality-fy-sr
 end
 to hunting-mortality-ma
   if (ml = 1)[
-    set tmgroid mgroid
-    let group-members deers with [ mgroid = tmgroid and ml = 0 ]
-    ask group-members [ set mgroid -1 ]
+    let lmgroid mgroid
+    ask deers in-radius-nowrap 3 with [ mgroid = lmgroid and ml = 0 ][
+      set mgroid -1
     ]
+  ]
   ifelse (random-float 1 < %adult-male-harvest-tested)
   [ if (cwd = 1) [
     set dcwdm (dcwdm + 1)
@@ -2460,7 +1931,7 @@ to hunting-mortality-ma
     if [ trialL ] of patch-here = 1 [   ;##11Mar18
       set tamh-sr tamh-sr + 1
       set tamt-sr tamt-sr + 1
-      ]
+    ]
     die
     ]
   [ if (cwd = 1) [
@@ -2489,51 +1960,7 @@ to hunting-mortality-ma-sr
   die
 end
 to hunting-mortality-fa
-  if (gl = 1)[
-    let pot-groupleaders deers with [ groid = tgroid and sex = 2 and aim > 18 and gl = 0 ]
-    let zz count pot-groupleaders
-    ifelse (zz > 0)
-    [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-      [ ask one-of pot-groupleaders with [ aim > 29 ][
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group [ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      [ ask one-of pot-groupleaders [
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group [ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      ]
-    [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-       set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        set gr (gr + xtr)
-        ask transfer-group [ set groid ttgroid ]
-        ]
-        ]
-      [ let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        ask transfer-group [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  if (gl = 1)[new-group-leader]
   if (gr = -1) [
     set counter1 0
     review-group-dynamics
@@ -2548,7 +1975,7 @@ to hunting-mortality-fa
     if [ trialL ] of patch-here = 1 [ ;##11Mar18
       set tafh-sr tafh-sr + 1
       set taft-sr taft-sr + 1
-      ]
+    ]
     die
     ]
   [ if (cwd = 1)[
@@ -2560,51 +1987,7 @@ to hunting-mortality-fa
     ]
 end
 to hunting-mortality-fa-sr
-  if (gl = 1)[
-    let pot-groupleaders deers with [ groid = tgroid and sex = 2 and aim > 18 and gl = 0 ]
-    let zz count pot-groupleaders
-    ifelse (zz > 0)
-    [ ifelse (any? pot-groupleaders with [ aim > 29 ])
-      [ ask one-of pot-groupleaders with [ aim > 29 ][
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group[ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      [ ask one-of pot-groupleaders [
-        set gl 1
-        set ttgroid who
-        set groid ttgroid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        ask transfer-group [ set groid ttgroid ]
-        set gr xtr
-        ]
-        ]
-      ]
-    [ let other-groupleaders-here deers-here with [ gl = 1 and groid != tgroid and gr < 3 ]
-      ifelse (count other-groupleaders-here > 0)
-      [ ask one-of other-groupleaders-here [
-       set ttgroid groid
-        let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        let xtr count transfer-group
-        set gr (gr + xtr)
-        ask transfer-group [ set groid ttgroid ]
-        ]
-        ]
-      [ let transfer-group deers with [ groid = tgroid and gl = 0 ]
-        ask transfer-group [
-          set gr -2
-          set groid -1
-          ]
-        ]
-      set n_leaders_lost (n_leaders_lost + 1)
-      ]
-    ]
+  if (gl = 1)[new-group-leader]
   if (gr = -1)[
     set counter1 0
     review-group-dynamics
@@ -2621,28 +2004,72 @@ to hunting-mortality-fa-sr
   ;set taft-sr taft-sr + 1
   die
 end
-to bachelor-group-formation
-  set tmgroid mgroid
-  let group-members deers in-radius-nowrap 1.5 with [ mgroid = tmgroid and ml = 0 ]
-  let cgs (count group-members)
-  let cgs1 0
-  let pot-gr-size mean-bachelor-group-size
-  if (cgs < pot-gr-size) [
-    let pot-groupmembers-here deers in-radius-nowrap 1.5 with [ mgroid = -1 and ml = 0 ]
-    set cgs1 (count pot-groupmembers-here)
-    ifelse (cgs1 >= (pot-gr-size - cgs))
-    [ ask n-of (pot-gr-size - cgs) pot-groupmembers-here [
-      set mgroid tmgroid
+
+to form-bachelor-groups
+
+  if d = 1 [ ;Form groups
+
+    let tmbg ((my + ma) / 4) ; appropriate # of group leaders
+    let male-leaders deers with [ ml = 1 ]
+    let diff (tmbg - count male-leaders)
+
+    if (diff > 0)[ ;designate new group leaders to fill up slots
+      let new-leaders n-of diff deers with [ sex = 1 and aim > 32 and ml = 0 ]
+      ask new-leaders [
+        set ml 1
+        set mgroid who
       ]
+      set male-leaders (turtle-set male-leaders new-leaders) ;add to leaders group
+    ]
+
+    ask male-leaders [ ;Fill out groups
+
+      let lgroid mgroid
+
+      let pot-groupmembers-here deers in-radius-nowrap 1.5 with [ mgroid = -1 and ml = 0 ]
+      let group-members pot-groupmembers-here with [ mgroid = lgroid ]
+
+      let to-fill max (list 0 (round mean-bachelor-group-size - count group-members)) ;needed members
+      let possible-fills count pot-groupmembers-here
+
+      if to-fill > 0 [ ;fill to target if possible
+        let new-members n-of (min list to-fill possible-fills) pot-groupmembers-here
+        ask new-members [
+          set mgroid lgroid
+        ]
+        set group-members (turtle-set group-members new-members)
       ]
-    [ if (cgs1 > 0)[
-      ask n-of cgs1 pot-groupmembers-here [
-        set mgroid tmgroid
-      ]
-      ]
+
+      set gr count group-members
+      if gr <= 1 [ set ml 0 ]
+
+    ]
+  ]
+
+end
+
+to review-bachelor-group
+  if (d = 1 or d > 10)[stop]
+  if is-turtle? deer mgroid [
+    ask deer mgroid [
+      set gr (gr - 1)
+      if gr <= 1 [ set ml 0 ]
     ]
   ]
 end
+
+;to bachelor-group-status
+;
+;  if (d > 1 and d < 10)[ ;bachelor group leaders assess their group membership
+;    ask deers with [ml = 1][
+;      set gr (count deers in-radius-nowrap 3 with [ mgroid = [mgroid] of myself ])
+;      if (gr <= 1)[ set ml 0]
+;      ]
+;  ]
+;
+;end
+
+
 to deer-mating
   ifelse (aim > 30)
   [ set ter 1.5
@@ -2653,45 +2080,69 @@ to deer-mating
     set nm (1 + random 3)
     set anm 0
   ]
-  set tnm nm
+  ;set tnm nm
   let female-deer-near-me deers in-radius-nowrap ter with [ sex = 2 and anm < nm and cwdpr < cwdc]   ;22Nov17
   let pmates (count female-deer-near-me)
   if (pmates > 0)[
-    ifelse (cwd = 1)
-    [ set infm 1 ]
-    [ set infm 0 ]
-    ifelse (pmates >= tnm)
-    [ set avmates tnm ]
-    [ set avmates pmates ]
-    ask n-of avmates female-deer-near-me [
-      ifelse (cwd = 1)
-      [ set inff 1
-        set tinff (tinff + 1)
-        ]
-      [ if (infm = 1)[
-        if (random-float 1 < 0.06)[;(0.2 + random-float 0.2))[     ;changed from 0.2 + random-float 0.2  to 0.41
-          set cwd 1
-          ]
-        ]
-        ]
-      set anm (anm + 1)
-    ]
-    if (tinff > 0)[
-      if (cwd = 0)[
-        repeat tinff [
-          if (random-float 1 < 0.41)[;(0.2 + random-float 0.2))[
-            set cwd 1
-          ]
-        ]
-      ]
-      set tinff 0
-    ]
+
+    let lcwd cwd
+    let avmates min list nm pmates ;available mates
     set anm avmates
+
+    let exposures 0
+
+    ask n-of avmates female-deer-near-me [
+      if (cwd = 1 and lcwd = 0)[
+        set exposures (exposures + 1) ; male is exposed once
+      ]
+      if (cwd = 0 and lcwd = 1)[ ; chance for female to be infected
+        ;(0.2 + random-float 0.2))[     ;changed from 0.2 + random-float 0.2  to 0.41
+        if (random-float 1 < 0.06)[ set cwd 1 ]
+      ]
+    ]
+
+    if cwd = 0 and exposures > 0 [
+      let cum-prob (1 - (1 - 0.41) ^ exposures ) ;cumulative prob of infection
+      if random-float 1 < cum-prob [ set cwd 1 ]
+    ]
   ]
+
+
+
+;  I think the following code is more accurate, but it's slow.
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  let actual-mates n-of avmates female-deer-near-me
+;    foreach [who] of actual-mates [ [mate] ->
+;
+;      if ([cwd] of deer mate = 0 and cwd = 1)[ ;male infected and female is not
+;        ask deer mate [
+;          ;(0.2 + random-float 0.2))[     ;changed from 0.2 + random-float 0.2  to 0.41
+;          if (random-float 1 < 0.06)[set cwd 1]
+;        ]
+;      ]
+;
+;      if ([cwd] of deer mate = 1 and cwd = 0)[ ;male not infected and female is
+;        if (random-float 1 < 0.41)[;(0.2 + random-float 0.2))[
+;            set cwd 1
+;        ]
+;      ]
+;      ;if infection status of m and f is the same, do nothing
+;
+;    ]
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 end
+
 to review-group-dynamics                                             ; turtle procedure: doe social group leader loses leadership status if no group members left
-  ask deer tgroid[
-    set gr (gr - (counter1 + 1))
+  if (groid = -1 or gr = -2) [stop]
+  if not is-turtle? deer groid [
+    set groid -1
+    set gr -2
+    stop
+  ]
+  ask deer groid[
+    set gr (gr - 1)
     if (gr <= 0)[
       set gl 0
       set groid -1
@@ -2700,15 +2151,231 @@ to review-group-dynamics                                             ; turtle pr
       ]
     ]
 end
-to-report d
-  report remainder ticks 12 + 1
+
+to yearlings-disperse
+  ;if d != 5 [stop]
+
+  let disp-prob random-float 1
+
+  ifelse sex = 1
+    [ review-group-dynamics ;leave maternal group
+      set gr -2 set groid -1
+      if disp-prob < yearling-male-dispersal-rate [
+        set mgroid -1 ; now elgible to join bachelor group
+        deer-mdisperse ;disperse
+      ]]
+    [ if disp-prob < yearling-female-dispersal-rate [
+         review-group-dynamics ;leave maternal group
+         set gr -2 set groid -1
+         deer-fdisperse
+      ]]
+
 end
+
+to females-reproduce-group
+
+   if (aim = 13) [
+     if (random 100 < 21)[
+       set grfis 0
+       set tgroid groid
+       ifelse (tgroid >= 0 and is-turtle? deer tgroid)
+       [ ask deer tgroid [
+           ifelse (gr > 4)
+           [ set gr (gr - 1)
+             set tgroid -1
+             set tgr -2
+             set grfis 1
+           ]
+           [ set gr (gr + 1)
+             set tgroid groid
+             set tgr -1
+           ]
+           ]
+       if (grfis = 1)[
+         set groid -1
+         set gr -2
+       ]
+       ]
+       [ set tgroid -1
+         set tgr -2
+       ]
+       deer-reproduce
+       ]
+     ]
+   if (aim > 24)[
+     if (random 100 < 81)[
+       set grfis 0
+       set tgroid groid
+       ifelse (gl > 0)
+       [set gr (gr + 2)
+         if (gr > 6)[
+           let xgr gr - 6
+           let group-members deers in-radius-nowrap 3 with [ groid = tgroid and sex = 2 and aim > 13 and gl = 0 ]
+           ifelse (count group-members >= xgr)
+           [ set ngr xgr ]
+           [ set ngr count group-members ]
+           ask n-of ngr group-members [
+             new-group-formation
+             ]
+           ]
+         set tgr -1
+         ]
+       [ ifelse (groid < 0 or not is-turtle? deer groid)
+         [ ifelse (aim > 36 and n_leaders_lost > 0)
+           [set gl 1
+             set gr 2
+             set groid who
+             set tgroid who
+             set tgr -1
+             set n_leaders_lost (n_leaders_lost - 1)
+             ]
+           [ set tgroid -1
+             set tgr -2
+             ]
+           ]
+         [ ask deer tgroid [
+             ifelse (gr > 4)
+             [ set gr (gr - 1)
+               set tgroid -1
+               set tgr -2
+               set grfis 1
+             ]
+             [ set gr (gr + 2)
+               set tgroid groid
+               set tgr -1
+             ]
+         ]
+         if (grfis = 1)[
+           set groid -1
+           set gr -2
+           ]
+         ]
+         ]
+       deer-reproduce
+       ]
+   ]
+   ;---------------------------Join-group-------------------------------------------------------------------------
+   if (gl = 1 and gr < 4)[
+     set tgroid groid
+     let solitary-adult-females-here deers in-radius-nowrap 1.5 with [ sex = 2 and gr = -2 and aim >= 13 and cwdpr < cwdc ]
+     set sd count solitary-adult-females-here
+     set tgr 0
+     if (sd > 0)[
+       ifelse (sd > 2)
+       [ set sd1 2 ]
+       [ set sd1 1 ]
+       ask n-of sd1 solitary-adult-females-here [
+         set tmomid who
+         set groid tgroid
+         set gr -1
+         set tgr (tgr + 1)
+         ask deers in-radius-nowrap 1.5 with [ momid = tmomid and aim = 1 ][
+           set groid tgroid
+           set gr -1
+           set tgr (tgr + 1)
+             ]
+           ]
+         ]
+     set gr (gr + tgr)
+     if (gr = 0)[
+       set groid -1
+       set gr -2
+     ]
+     ]
+
+end
+
+to hunting-mortality
+  if (aim < 10)[
+    ifelse (sex = 1)
+    [ if (random-float 1 < mf12hm)[
+      set tgroid groid
+      hunting-mortality-mf12
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < mf12hm-sr)[
+        set tgroid groid
+        hunting-mortality-mf12-sr
+        ]
+      ]
+    ]
+    [ if (random-float 1 < ff12hm)[
+      set tgroid groid
+      set twho who
+      hunting-mortality-ff12
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < ff12hm-sr)[
+        set tgroid groid
+        hunting-mortality-ff12-sr
+        ]
+      ]
+    ]
+    ]
+  if (aim = 20)[
+    ifelse (sex = 1)
+    [ if (random-float 1 < myhm)[
+      set tgroid groid
+      hunting-mortality-my
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < myhm-sr)[
+        set tgroid groid
+        hunting-mortality-my-sr
+        ]
+      ]
+    ]
+    [ if (random-float 1 < fyhm)[
+      set tgroid groid
+      set twho who
+      hunting-mortality-fy
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < fyhm-sr)[
+        set tgroid groid
+        hunting-mortality-fy-sr
+        ]
+      ]
+    ]
+    ]
+  if (aim > 30)[
+    ifelse (sex = 1)
+    [ if (random-float 1 < mahm)[
+      set tgroid groid
+      hunting-mortality-ma
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < mahm-sr)[
+        set tgroid groid
+        hunting-mortality-ma-sr
+        ]
+      ]
+    ]
+    [ if (random-float 1 < fahm)[
+      set tgroid groid
+      set twho who
+      hunting-mortality-fa
+      ]
+    if [ trialL ] of patch-here = 1[
+      if (random-float 1 < fahm-sr)[
+        set tgroid groid
+        hunting-mortality-fa-sr
+        ]
+      ]
+    ]
+    ]
+
+end
+
+;to-report d
+;  report remainder ticks 12 + 1
+;end
 to-report year
   report floor (ticks / 12) + 1
 end
-to-report totcwdd-sr
-  report mcwd-sr + mycwd-sr + mfcwd-sr + fcwd-sr + fycwd-sr + ffcwd-sr
-end
+;to-report totcwdd-sr
+;  report mcwd-sr + mycwd-sr + mfcwd-sr + fcwd-sr + fycwd-sr + ffcwd-sr
+;end
 to-report mf
   report count deers with [ sex = 1 and aim < 12.5 ]
 end
@@ -3108,7 +2775,7 @@ MONITOR
 801
 64
 Month
-d
+remainder ticks 12 + 1
 17
 1
 11
@@ -4588,6 +4255,112 @@ NetLogo 6.0.2
     </enumeratedValueSet>
     <enumeratedValueSet variable="cwd_region">
       <value value="&quot;Boone County&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="10" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="manhm">
+      <value value="0.01"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf6nhm">
+      <value value="0.055"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12hm">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%adult-male-harvest-tested">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="subregion">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%adult-female-harvest-tested">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fahm">
+      <value value="0.2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-infection">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%fawn-male-harvest-tested">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="patchx">
+      <value value="19"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fynhm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12hm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="patchy">
+      <value value="11"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="myhm">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fanhm">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fyhm">
+      <value value="0.15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12hm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%yearling-male-harvest-tested">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf6hm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fyhm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="myhm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12hm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff6nhm">
+      <value value="0.055"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fahm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mahm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12nhm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%yearling-female-harvest-tested">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12nhm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mahm">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff6hm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="radius">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%fawn-female-harvest-tested">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mynhm">
+      <value value="0.01"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="cwd_region">
+      <value value="&quot;Osage County&quot;"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>

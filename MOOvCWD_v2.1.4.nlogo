@@ -32,7 +32,6 @@ globals
   ttgroid                                        ;stores groid (group-id) of an individual during implementation of certain submodels
   n_leaders_lost                                 ;counter-doe social group leaders losing their leadership status
   twho                                           ;stores 'who' of an individual during implementation of certain submodels
-  counter1                                       ;counter for fawns less than 2 month old while implementing hunting or non-hunting mortality for a female deer
   tgr                                            ;counter for group members during group formation as well as fission
   oldm                                           ;proportion of old males (above 229 when d = 1) in the adult male deer population
   oldf                                           ;proportion of old females (above 229 when d = 1) in the adult female deer population
@@ -1548,13 +1547,13 @@ to deer-die-CWD
   ;----------------------------------------------------------------- fawns upto 6 months
   ifelse (aim < 6.5)
   [ ifelse (sex = 1)
-    [ set counter1 0
+    [
       if (gr = -1)[
         review-group-dynamics
       ]
       die
     ]
-    [ set counter1 0
+    [
       if (gr = -1)[
         review-group-dynamics
       ]
@@ -1564,13 +1563,13 @@ to deer-die-CWD
   ;------------------------------------------------------------------ fawns 7 to 12 months
   [ ifelse (aim < 12.5)
     [ ifelse (sex = 1)
-      [ set counter1 0
+      [
         if (gr = -1)[
           review-group-dynamics
         ]
         die
       ]
-      [ set counter1 0
+      [
         if (gr = -1)[
           review-group-dynamics
         ]
@@ -1580,27 +1579,21 @@ to deer-die-CWD
     ;------------------------------------------------------------------ yearlings 13 to 24 months
     [ ifelse (aim < 24.5)
       [ ifelse (sex = 1)
-        [ set counter1 0
+        [
           if (gr = -1) [
             review-group-dynamics
           ]
           die
         ]
-        [ ask deers in-radius-nowrap 1.5 with [ momid = lwho and aim < 2.5 ][ ;my fawns
-              set counter1 counter1 + 1
+        [ ;if female yearling
+          ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][ ;ask my fawns to die
+              review-group-dynamics
               die
           ]
-          ifelse (gl > 0)
-          [ new-group-leader
-            ]
-          [ if (gr = -1)[
-            review-group-dynamics
-            ]
-            ]
-          set counter1 0
-          die
-          ]
+            ifelse (gl > 0)[ new-group-leader ][ if (gr = -1)[review-group-dynamics] ] ;If I'm a leader, find a new one
+            die
         ]
+      ]
       ;----------------------------------------------------------------------- male 25 to 240 and more than 240
       [ ifelse (sex = 1)
         [ if (ml = 1)[
@@ -1610,20 +1603,14 @@ to deer-die-CWD
           die
         ]
         ;--------------------------------------------------------------------- female 25 to 240
-        [ ask deers in-radius-nowrap 1.5 with [ momid = lwho and aim < 2.5 ][
-             set counter1 counter1 + 1
-             die
-          ]
-          ifelse (gl > 0)
-          [ new-group-leader
+        [
+            ask deers in-radius-nowrap 2 with [ momid = [who] of myself and aim < 2.5 ][
+              review-group-dynamics
+              die
             ]
-          [ if (gr = -1)[
-            review-group-dynamics
-            ]
-          ]
-          set counter1 0
-          die
-          ]
+            ifelse (gl > 0)[ new-group-leader ][ if (gr = -1)[review-group-dynamics] ]
+            die
+         ]
         ]
       ]
     ]
@@ -1741,10 +1728,7 @@ end
 
 ;============================================================
 to hunting-mortality-mf12
-  if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1)[review-group-dynamics]
   ifelse (random-float 1 < %fawn-male-harvest-tested)
   [ if (cwd = 1)[
     set dcwdmf dcwdmf + 1
@@ -1767,10 +1751,7 @@ to hunting-mortality-mf12
     ]
 end
 to hunting-mortality-mf12-sr
-  if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1)[review-group-dynamics]
   if (cwd = 1)[
     set dcwdmf dcwdmf + 1
     set dcwdmf-sr dcwdmf-sr + 1
@@ -1784,10 +1765,7 @@ to hunting-mortality-mf12-sr
   die
 end
 to hunting-mortality-ff12
-  if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1)[review-group-dynamics]
   ifelse (random-float 1 < %fawn-female-harvest-tested)
   [ if (cwd = 1)[
     set dcwdff dcwdff + 1
@@ -1810,10 +1788,7 @@ to hunting-mortality-ff12
   ]
 end
 to hunting-mortality-ff12-sr
-  if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1)[review-group-dynamics]
   if (cwd = 1)[
     set dcwdff dcwdff + 1
     set dcwdff-sr dcwdff-sr + 1
@@ -1849,10 +1824,7 @@ to hunting-mortality-my
   ]
 end
 to hunting-mortality-my-sr
-  if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1)[review-group-dynamics]
   if (cwd = 1)[
     set dcwdmy dcwdmy + 1
     set dcwdmy-sr dcwdmy-sr + 1
@@ -1868,10 +1840,7 @@ end
 to hunting-mortality-fy
   ifelse (gl > 0)
   [ new-group-leader]
-  [ if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  [ if (gr = -1)[review-group-dynamics]
   ]
   ifelse (random-float 1 < %yearling-female-harvest-tested)
   [ if (cwd = 1) [
@@ -1897,10 +1866,7 @@ end
 to hunting-mortality-fy-sr
   ifelse (gl > 0)
   [ new-group-leader]
-  [ if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  [ if (gr = -1)[review-group-dynamics]
   ]
   if (cwd = 1) [
     set dcwdfy dcwdfy + 1
@@ -1943,10 +1909,7 @@ to hunting-mortality-ma
     ]
 end
 to hunting-mortality-ma-sr
-  if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1)[review-group-dynamics]
   if (cwd = 1)[
     set dcwdm dcwdm + 1
     set dcwdm-sr dcwdm-sr + 1
@@ -1961,10 +1924,7 @@ to hunting-mortality-ma-sr
 end
 to hunting-mortality-fa
   if (gl = 1)[new-group-leader]
-  if (gr = -1) [
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1) [review-group-dynamics]
   ifelse (random-float 1 < %adult-female-harvest-tested)
   [ if (cwd = 1)[
     set dcwdf (dcwdf + 1)
@@ -1988,10 +1948,7 @@ to hunting-mortality-fa
 end
 to hunting-mortality-fa-sr
   if (gl = 1)[new-group-leader]
-  if (gr = -1)[
-    set counter1 0
-    review-group-dynamics
-    ]
+  if (gr = -1)[review-group-dynamics]
   if (cwd = 1)[
     set dcwdf (dcwdf + 1)
     set dcwdf-sr dcwdf-sr + 1

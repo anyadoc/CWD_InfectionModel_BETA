@@ -334,12 +334,8 @@ to go
     set oldm precision (count deers with [ sex = 1 and aim >= 229 ] / ma) 3
     set oldf precision (count deers with [ sex = 2 and aim >= 229 ] / fa) 3
 
-    ]
+  ]
 
-  if (d = 10)[              ;turtle procedure: bachelor groups break down before the rutting season
-    let male-leaders deers with [ ml = 1 ]
-    ask male-leaders [ set gr 0 ]
-    ]
   if (d = 5) [
 
     ask deers with [ aim = 13 and gr = -1 ][
@@ -352,25 +348,35 @@ to go
 
   ]
 
+  if (d = 10)[              ;turtle procedure: bachelor groups break down before the rutting season
+    ask deers with [ ml = 1 ] [ set gr 0 ]
+  ]
+
   if (d = 11) [
-    let solitary-male-yearlings deers with [ sex = 1 and aim = 19 and gr = -2 and mgroid = -2 ]
-    ask solitary-male-yearlings [
+
+    ; Ask solitary males to disperse
+    ask deers with [ sex = 1 and aim = 19 and gr = -2 and mgroid = -2 ] [
       if (random-float 1 < yearling-male-dispersal-rate) [
         set mgroid -1
         deer-mdisperse
         ]
       set mgroid -1
       ]
+
     ;===========deer mating submodel==========
-    let female-deers deers with [ sex = 2 ]
-    ask female-deers [
-      set nm (1 + random 3)
-      set anm 0
-    ]
-    let breeding-males deers with [ sex = 1 and aim > 18 and cwdpr < cwdc]  ;22NOV17 ADDED cwdpr < cwdc
-    ask breeding-males [
+
+;    let female-deers deers with [ sex = 2 ] ; doesn't currently do anything
+;    ask female-deers [
+;      set nm (1 + random 3)
+;      set anm 0
+;    ]
+
+    ask deers with [ sex = 1 and aim > 18 and cwdpr < cwdc] [
       deer-mating
     ]
+
+    ; Calculate values
+
     let deers-sr deers-on patches with [ trialL = 1 ]
     set mf-sr count deers-sr with [ sex = 1 and aim < 12.5 ]
     set ff-sr count deers-sr with [ sex = 2 and aim < 12.5 ]
@@ -445,6 +451,7 @@ to go
     set vals3 (list (ma-sr) (my-sr) (mf-sr) (fa-sr) (fy-sr) (ff-sr) (phn-sr) (mcwd-sr) (mycwd-sr) (mfcwd-sr) (fcwd-sr) (fycwd-sr) (ffcwd-sr) (totcwdd-sr))
     set vals6 (list (test_area) (mf12hm-sr) (ff12hm-sr) (myhm-sr) (fyhm-sr) (mahm-sr) (fahm-sr) (phn-sr) (totcwdd-sr))
   ]
+
   if (d = 12) [
 
     ask deers [
@@ -2022,15 +2029,18 @@ end
 
 to deer-mating
   let ter 1.5
+  set anm 0
   ifelse (aim > 30)
   [ set nm (1 + random 6)
-    set anm 0
   ]
   [ set ter 2.5
     set nm (1 + random 3)
-    set anm 0
   ]
-  let female-deer-near-me deers in-radius-nowrap ter with [ sex = 2 and anm < nm and cwdpr < cwdc]   ;22Nov17
+
+  ;;;;;;;;;;;;;;;;;;;;;;
+
+  ;let female-deer-near-me deers in-radius-nowrap ter with [ sex = 2 and anm < nm and cwdpr < cwdc]   ;22Nov17
+  let female-deer-near-me deers in-radius-nowrap ter with [ sex = 2 and cwdpr < cwdc] ;nm currently doesnt change
   let pmates (count female-deer-near-me)
   if (pmates > 0)[
 
@@ -2055,8 +2065,6 @@ to deer-mating
       if random-float 1 < cum-prob [ set cwd 1 ]
     ]
   ]
-
-
 
 ;  I think the following code is more accurate, but it's slow.
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

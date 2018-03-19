@@ -1,11 +1,6 @@
 extensions [gis profiler]
 globals
 [
-  dxp                                            ;x coordinate of the patch where a yearling deer belongs before dispersal (natal range)
-  dxn                                            ;x coordinate of the patch where a yearling deer reaches after dispersing from its natal range
-  dyp                                            ;y coordinate of the patch where a yearling deer belongs before dispersal (natal range)
-  dyn                                            ;y coordinate of the patch where a yearling deer reaches after dispersing from its natal range
-  dd                                             ;predicted dispersal distance from log-normal pdf
   ndd                                            ;counter-number of deer dispersing out of the model landscape
   vals1                                          ;list to store reporters for output file
   vals2                                          ;list to store reporters for output file
@@ -28,14 +23,9 @@ globals
   tfft                                           ;counter-fawn female deer tested
   tyft                                           ;counter-yearling female deer tested
   taft                                           ;counter-adult female deer tested
-  tgroid                                         ;stores groid (group-id) of an individual during implementation of certain submodels
-  ttgroid                                        ;stores groid (group-id) of an individual during implementation of certain submodels
   n_leaders_lost                                 ;counter-doe social group leaders losing their leadership status
-  twho                                           ;stores 'who' of an individual during implementation of certain submodels
-  tgr                                            ;counter for group members during group formation as well as fission
   oldm                                           ;proportion of old males (above 229 when d = 1) in the adult male deer population
   oldf                                           ;proportion of old females (above 229 when d = 1) in the adult female deer population
-  tmgroid                                        ;stores mgroid (male group id) during execution of certain submodels
 
   mcwd
   mycwd
@@ -103,20 +93,6 @@ globals
   tcwd-sr
   pdcwd-sr
   op-sr
-  mom                                             ;mom's who
-  tmomid
-  sd                                              ;solitary females
-  sd1                                             ;counter
-  ttmomid                                         ;for identifying adult siblings
-  ttaim                                           ;same
-  tnm                                             ;to transfer the nm value
-  ter                                             ;mating area (more for young deers)
-  ;infm
-  inff
-  ;avmates
-  tinff
-  grfis                                           ;group fission 10Jun16
-  ngr
   tot_harvest
   tot_harvest-sr
   tmfh                                            ;counter-male fawn deer harvested
@@ -134,6 +110,8 @@ globals
 
   ;MOOvPOP( Agent-based model of deer population dynamics) generated deer population is used to initialize this model ('import-world'),
   ;hence global variables from MOOvPOP are also included.
+  counter1 tgr tgroid tmgroid ttgroid twho
+  dd dxp dxn dyp dyn
   output2
   region
   recommended_parameter_values
@@ -1204,7 +1182,7 @@ to cwd-progression
                     ]
                   if (aim < 13) [
                     ifelse (sex = 2)
-                    [ if (momid != ttmomid)[                                            ; female fawns other than full siblings
+                    [ if (momid != lmymom)[                                            ; female fawns other than full siblings
                         if (random-float 1 < (0.13 + random-float 0.14))[               ; 0.13-0.26
                           set cwd 1
                           ]
@@ -1352,7 +1330,7 @@ to cwd-progression
 ;                  ]
               if (aim < 13) [
                 ifelse (sex = 2)
-                [ if (momid != ttmomid)[                                                                ; female fawns other than full siblings
+                [ if (momid != lmymom)[                                                                ; female fawns other than full siblings
                   if (random-float 1 < (0.13 + random-float 0.14))[
                     set cwd 1
                     ]
@@ -1397,7 +1375,10 @@ to cwd-progression
     ]
 end
 to deer-reproduce
-  set mom who
+  let lmom who
+  let lgroid groid
+  let lgr -2
+  if gr > -2 [ set lgr -1 ]
   ifelse (aim < 13.5)
   [ hatch-deers 1 [
     set aim 1
@@ -1409,9 +1390,9 @@ to deer-reproduce
     set cwdm 20 + random 6
     set cwdi 3 + random 2
     set cwdc 15 + random 4
-    set momid mom
-    set groid tgroid
-    set gr tgr
+    set momid lmom
+    set groid lgroid
+    set gr lgr
     ifelse random 100 < 51
     [ set sex 1
       set mgroid -2 ]
@@ -1428,10 +1409,10 @@ to deer-reproduce
     set cwdm 20 + random 6
     set cwdi 3 + random 2
     set cwdc 15 + random 4
-    set momid mom
+    set momid lmom
     ;set ownid who
-    set groid tgroid
-    set gr tgr
+    set groid lgroid
+    set gr lgr
     ifelse random 100 < 51
     [ set sex 1
       set mgroid -2 ]
@@ -1440,6 +1421,11 @@ to deer-reproduce
     ]
 end
 to deer-mdisperse                                                          ; turtle procedure: male yearling dispersal
+
+  let ldd 0
+  let ldxp 0 let ldyp 0
+  let ldyn 0 let ldxn 0
+
   ask patch-here [
     if (dfp < .72) [
       let mdd (35.07 - (48.14 * (dfp)))                                    ; relationship between mean dispersal distance and proportion of forest cover to estimate the mean dispersal distance Long et al., 2005; Difenbach et al., 2008
@@ -1447,22 +1433,22 @@ to deer-mdisperse                                                          ; tur
       let lv ln (1 + (sddd ^ 2) / (mdd ^ 2))
       let lm ln mdd - (lv / 2)
       let ls sqrt lv
-      set dd (exp (random-normal lm ls) * 0.6214)                           ; this is in miles, 1 patch fd is 1 mile, so fd dd
+      set ldd (exp (random-normal lm ls) * 0.6214)                           ; this is in miles, 1 patch fd is 1 mile, so fd dd
       ]
     ]
   let counter-md 0
   rt random 360
-  while [ counter-md < round dd ]
+  while [ counter-md < round ldd ]
   [ ask patch-here [
-      set dxp (pxcor)
-      set dyp (pycor)]
+      set ldxp (pxcor)
+      set ldyp (pycor)]
     fd 1
     set counter-md counter-md + 1
     ask patch-here [
-      set dxn (pxcor)
-      set dyn (pycor)
+      set ldxn (pxcor)
+      set ldyn (pycor)
     ]
-    if (abs(dxn - dxp) > 1 or abs(dyn - dyp) > 1)
+    if (abs(ldxn - ldxp) > 1 or abs(ldyn - ldyp) > 1)
     [ set ndd ndd + 1
       set cwd 0                                                             ; deer dispersing INTO the landscape are CWD-free.
       set cwdm 20 + random 6
@@ -1474,19 +1460,22 @@ to deer-mdisperse                                                          ; tur
 end
 to deer-fdisperse
   let counter-fd 0
+  let ldxp 0
+  let ldyp 0
+  let ldxn 0 let ldyn 0
   rt random 360
-  set dd round (random-normal mean-female-dispersal-distance stddev-dispersal-distance)
-  while [ counter-fd < dd ]
+  let ldd round (random-normal mean-female-dispersal-distance stddev-dispersal-distance)
+  while [ counter-fd < ldd ]
   [ ask patch-here [
-      set dxp (pxcor)
-      set dyp (pycor) ]
+      set ldxp (pxcor)
+      set ldyp (pycor) ]
     fd 1
     set counter-fd counter-fd + 1
     ask patch-here [
-      set dxn (pxcor)
-      set dyn (pycor)
+      set ldxn (pxcor)
+      set ldyn (pycor)
     ]
-    if (abs(dxn - dxp) > 1 or abs(dyn - dyp) > 1)[
+    if (abs(ldxn - ldxp) > 1 or abs(ldyn - ldyp) > 1)[
       set ndd ndd + 1
       set cwd 0
       set cwdm 20 + random 6
@@ -1498,6 +1487,10 @@ to deer-fdisperse
   finalize-home-patch
 end
 to finalize-home-patch
+
+  let ldxp 0 let ldyp 0
+  let ldxn 0 let ldyn 0
+
   let fhp 0
   ask patch-here [
     if (do != 1)[
@@ -1505,15 +1498,15 @@ to finalize-home-patch
     ]
     ]
   if (fhp > 0)[
-    set dxp (pxcor)
-    set dyp (pycor)
+    set ldxp (pxcor)
+    set ldyp (pycor)
     move-to min-one-of patches with [ do = 1 ] [ distance myself ]
     set color blue
     ask patch-here [
-      set dxn (pxcor)
-      set dyn (pycor)
+      set ldxn (pxcor)
+      set ldyn (pycor)
       ]
-    if (abs(dxn - dxp) > 1 or abs(dyn - dyp) > 1)                                             ; dispersing deer goes out of the model landscape
+    if (abs(ldxn - ldxp) > 1 or abs(ldyn - ldyp) > 1)                                             ; dispersing deer goes out of the model landscape
     [ set ndd ndd + 1
       set cwd 0
       set cwdm 20 + random 6
@@ -2028,16 +2021,15 @@ end
 
 
 to deer-mating
+  let ter 1.5
   ifelse (aim > 30)
-  [ set ter 1.5
-    set nm (1 + random 6)
+  [ set nm (1 + random 6)
     set anm 0
   ]
   [ set ter 2.5
     set nm (1 + random 3)
     set anm 0
   ]
-  ;set tnm nm
   let female-deer-near-me deers in-radius-nowrap ter with [ sex = 2 and anm < nm and cwdpr < cwdc]   ;22Nov17
   let pmates (count female-deer-near-me)
   if (pmates > 0)[
@@ -2131,43 +2123,40 @@ end
 
 to females-reproduce-group
 
+  let grfis 0
+  let lgroid groid
+  let lgr gr
+
    if (aim = 13) [
      if (random 100 < 21)[
-       set grfis 0
-       set tgroid groid
-       ifelse (tgroid >= 0 and is-turtle? deer tgroid)
-       [ ask deer tgroid [
+       if (lgroid >= 0 and is-turtle? deer lgroid)[
+        ask deer lgroid [
            ifelse (gr > 4)
-           [ set gr (gr - 1)
-             set tgroid -1
-             set tgr -2
+           [ set gr (gr - 1) ; leave group
              set grfis 1
            ]
            [ set gr (gr + 1)
-             set tgroid groid
-             set tgr -1
            ]
-           ]
+       ]
        if (grfis = 1)[
          set groid -1
          set gr -2
        ]
        ]
-       [ set tgroid -1
-         set tgr -2
-       ]
+
        deer-reproduce
+
        ]
      ]
+
    if (aim > 24)[
      if (random 100 < 81)[
-       set grfis 0
-       set tgroid groid
        ifelse (gl > 0)
-       [set gr (gr + 2)
+       [ set gr (gr + 2)
          if (gr > 6)[
+           let ngr 0
            let xgr gr - 6
-           let group-members deers in-radius-nowrap 3 with [ groid = tgroid and sex = 2 and aim > 13 and gl = 0 ]
+           let group-members deers in-radius-nowrap 3 with [ groid = lgroid and sex = 2 and aim > 13 and gl = 0 ]
            ifelse (count group-members >= xgr)
            [ set ngr xgr ]
            [ set ngr count group-members ]
@@ -2175,31 +2164,22 @@ to females-reproduce-group
              new-group-formation
              ]
            ]
-         set tgr -1
+         ;set tgr -1
          ]
        [ ifelse (groid < 0 or not is-turtle? deer groid)
-         [ ifelse (aim > 36 and n_leaders_lost > 0)
-           [set gl 1
+         [ if (aim > 36 and n_leaders_lost > 0)
+           [ set gl 1
              set gr 2
              set groid who
-             set tgroid who
-             set tgr -1
              set n_leaders_lost (n_leaders_lost - 1)
              ]
-           [ set tgroid -1
-             set tgr -2
-             ]
            ]
-         [ ask deer tgroid [
+         [ ask deer lgroid [
              ifelse (gr > 4)
              [ set gr (gr - 1)
-               set tgroid -1
-               set tgr -2
                set grfis 1
              ]
              [ set gr (gr + 2)
-               set tgroid groid
-               set tgr -1
              ]
          ]
          if (grfis = 1)[
@@ -2213,27 +2193,26 @@ to females-reproduce-group
    ]
    ;---------------------------Join-group-------------------------------------------------------------------------
    if (gl = 1 and gr < 4)[
-     set tgroid groid
+     let llgroid who
      let solitary-adult-females-here deers in-radius-nowrap 1.5 with [ sex = 2 and gr = -2 and aim >= 13 and cwdpr < cwdc ]
-     set sd count solitary-adult-females-here
-     set tgr 0
+     let sd count solitary-adult-females-here
      if (sd > 0)[
+       let sd1 0
        ifelse (sd > 2)
        [ set sd1 2 ]
        [ set sd1 1 ]
        ask n-of sd1 solitary-adult-females-here [
-         set tmomid who
-         set groid tgroid
+         let lmom who
+         set groid llgroid
          set gr -1
-         set tgr (tgr + 1)
-         ask deers in-radius-nowrap 1.5 with [ momid = tmomid and aim = 1 ][
-           set groid tgroid
+         ask deer llgroid [ set gr (gr + 1) ]
+         ask deers in-radius-nowrap 1.5 with [ momid = lmom and aim = 1 ][
+           set groid llgroid
            set gr -1
-           set tgr (tgr + 1)
+           ask deer llgroid [ set gr (gr + 1) ]
              ]
            ]
          ]
-     set gr (gr + tgr)
      if (gr = 0)[
        set groid -1
        set gr -2
@@ -2246,24 +2225,19 @@ to hunting-mortality
   if (aim < 10)[
     ifelse (sex = 1)
     [ if (random-float 1 < mf12hm)[
-      set tgroid groid
       hunting-mortality-mf12
       ]
     if [ trialL ] of patch-here = 1[
       if (random-float 1 < mf12hm-sr)[
-        set tgroid groid
         hunting-mortality-mf12-sr
         ]
       ]
     ]
     [ if (random-float 1 < ff12hm)[
-      set tgroid groid
-      set twho who
       hunting-mortality-ff12
       ]
     if [ trialL ] of patch-here = 1[
       if (random-float 1 < ff12hm-sr)[
-        set tgroid groid
         hunting-mortality-ff12-sr
         ]
       ]
@@ -2272,24 +2246,20 @@ to hunting-mortality
   if (aim = 20)[
     ifelse (sex = 1)
     [ if (random-float 1 < myhm)[
-      set tgroid groid
       hunting-mortality-my
       ]
     if [ trialL ] of patch-here = 1[
       if (random-float 1 < myhm-sr)[
-        set tgroid groid
         hunting-mortality-my-sr
         ]
       ]
     ]
     [ if (random-float 1 < fyhm)[
-      set tgroid groid
-      set twho who
       hunting-mortality-fy
       ]
     if [ trialL ] of patch-here = 1[
       if (random-float 1 < fyhm-sr)[
-        set tgroid groid
+        ;set tgroid groid
         hunting-mortality-fy-sr
         ]
       ]
@@ -2298,24 +2268,19 @@ to hunting-mortality
   if (aim > 30)[
     ifelse (sex = 1)
     [ if (random-float 1 < mahm)[
-      set tgroid groid
       hunting-mortality-ma
       ]
     if [ trialL ] of patch-here = 1[
       if (random-float 1 < mahm-sr)[
-        set tgroid groid
         hunting-mortality-ma-sr
         ]
       ]
     ]
     [ if (random-float 1 < fahm)[
-      set tgroid groid
-      set twho who
       hunting-mortality-fa
       ]
     if [ trialL ] of patch-here = 1[
       if (random-float 1 < fahm-sr)[
-        set tgroid groid
         hunting-mortality-fa-sr
         ]
       ]

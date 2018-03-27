@@ -270,7 +270,7 @@ end
 
 ;------------------------------------------------------------
 to go
-  if (ticks = 60 or count deers with [cwd = 1 ] = 0) [
+  if (ticks = 60) [ ; or count deers with [cwd = 1 ] = 0) [                             ;26Mar18 commented out stop condition for no cwd+ deer after discussions with Colter
     stop
   ]
 
@@ -388,23 +388,23 @@ to go
     ;Counts of infected deer by sex/ageclass
     let cwd-deers deers with [cwd = 1]
     set totcwdd count cwd-deers
-    set mcwd mcwd + count cwd-deers with [ sex = 1 and aim > 21 ]
-    set mycwd mycwd + count cwd-deers with [ sex = 1 and aim <= 21 and aim > 17 ]
-    set mfcwd mfcwd + count cwd-deers with [ sex = 1 and aim <= 17 ]
-    set fcwd mcwd + count cwd-deers with [ sex = 2 and aim > 21 ]
-    set fycwd mycwd + count cwd-deers with [ sex = 2 and aim <= 21 and aim > 17 ]
-    set ffcwd mfcwd + count cwd-deers with [ sex = 2 and aim <= 17 ]
+    set mcwd count cwd-deers with [ sex = 1 and aim > 21 ]                          ;26Mar18 BUG set mcwd mcwd + count cwd-deers with [ sex = 1 and aim > 21 ]
+    set mycwd count cwd-deers with [ sex = 1 and aim <= 21 and aim > 17 ]
+    set mfcwd count cwd-deers with [ sex = 1 and aim <= 17 ]
+    set fcwd count cwd-deers with [ sex = 2 and aim > 21 ]                              ;26mAR
+    set fycwd count cwd-deers with [ sex = 2 and aim <= 21 and aim > 17 ]
+    set ffcwd count cwd-deers with [ sex = 2 and aim <= 17 ]
 
     ;Counts of infected deer in subregion by sex/ageclass
     if subregion = true [
        let trialL-deers cwd-deers with [ trialL = 1 ]
        set totcwdd-sr count trialL-deers
-       set mcwd-sr mcwd-sr + count trialL-deers with [ sex = 1 and aim > 21 ]
-       set mycwd-sr mycwd-sr + count trialL-deers with [ sex = 1 and aim < 21 and aim > 17 ]
-       set mfcwd-sr mfcwd-sr + count trialL-deers with [ sex = 1 and aim <= 17 ]
-       set fcwd-sr mcwd-sr + count trialL-deers with [ sex = 2 and aim > 21 ]
-       set fycwd-sr mycwd-sr + count trialL-deers with [ sex = 2 and aim < 21 and aim > 17 ]
-       set ffcwd-sr mfcwd-sr + count trialL-deers with [ sex = 2 and aim <= 17 ]
+       set mcwd-sr count trialL-deers with [ sex = 1 and aim > 21 ]            ;26Mar18 BUG set mcwd-sr mcwd-sr + count trialL-deers with [ sex = 1 and aim > 21 ]
+       set mycwd-sr count trialL-deers with [ sex = 1 and aim <= 21 and aim > 17 ]
+       set mfcwd-sr count trialL-deers with [ sex = 1 and aim <= 17 ]
+       set fcwd-sr count trialL-deers with [ sex = 2 and aim > 21 ]                     ;26Mar18 BUG set fcwd-sr mcwd-sr(#) +(#) count trialL-deers with [ sex = 2 and aim > 21 ]
+       set fycwd-sr count trialL-deers with [ sex = 2 and aim <= 21 and aim > 17 ]
+       set ffcwd-sr count trialL-deers with [ sex = 2 and aim <= 17 ]
     ]
     ;
 
@@ -457,7 +457,15 @@ to go
     ask deers [
       hunting-mortality
       ]
-
+    ask patches [                       ;26Mar18 AB shifted from line 622
+      if dh = -1 [ stop ]
+      let pop count deers-here
+      let prev 0
+      if pop > 0 [ set patch-prev (count deers-here with [cwd = 1]) / pop ]
+      ifelse patch-prev > 0
+      [ set pcolor scale-color red patch-prev 1 0 ]
+      [ set pcolor scale-color green forest-percent 1 0 ]
+    ]
     if (ticks >= 0) [
       set hcwd (dcwdm + dcwdmy + dcwdmf + dcwdf + dcwdfy + dcwdff)
       set tcwd (tcwdm + tcwdmy + tcwdmf + tcwdf + tcwdfy + tcwdff)
@@ -595,23 +603,23 @@ to go
 ;  ]]
 ;  ]
 
-  ask patches [
-    if dh = -1 [stop]
-    let pop count deers-here
-    let prev 0
-    if pop > 0 [set patch-prev (count deers-here with [cwd = 1]) / pop]
-    ifelse patch-prev > 0
-    [set pcolor scale-color red patch-prev 1 0]
-    [ set pcolor scale-color green forest-percent 1 0 ]
-;    ifelse prev = 0
+;  ask patches [
+;    if dh = -1 [stop]
+;    let pop count deers-here
+;    let prev 0
+;    if pop > 0 [set patch-prev (count deers-here with [cwd = 1]) / pop]
+;    ifelse patch-prev > 0
+;    [set pcolor scale-color red patch-prev 1 0]
 ;    [ set pcolor scale-color green forest-percent 1 0 ]
-;    [ ifelse prev < 0.05
-;      [set pcolor yellow ]
-;      [ifelse prev < 0.1
-;        [ set pcolor orange ]
-;        [ set pcolor red ]
-;  ]]
-  ]
+;;    ifelse prev = 0
+;;    [ set pcolor scale-color green forest-percent 1 0 ]
+;;    [ ifelse prev < 0.05
+;;      [set pcolor yellow ]
+;;      [ifelse prev < 0.1
+;;        [ set pcolor orange ]
+;;        [ set pcolor red ]
+;;  ]]
+;  ]
 
 
 
@@ -2328,8 +2336,8 @@ end
 GRAPHICS-WINDOW
 678
 73
-1046
-430
+1022
+370
 -1
 -1
 12.0
@@ -2343,9 +2351,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-29
+27
 0
-28
+23
 0
 0
 1
@@ -2855,7 +2863,7 @@ CHOOSER
 cwd_region
 cwd_region
 "Boone County" "Callaway County" "Carroll County" "Chariton County" "Cole County" "Cooper County" "Franklin County" "Gasconade County" "Knox County" "Linn County" "Livingston County" "Miller County" "Moniteau County" "Morgan County" "Osage County" "Putnam County" "Randolph County" "Schuyler County" "Scotland County" "Shelby County" "St. Charles County" "St. Louis County" "Sullivan County" "Warren County" "Washington County" "MaconLinnCoreArea" "Seven County"
-14
+9
 
 TEXTBOX
 161
@@ -3025,7 +3033,7 @@ INPUTBOX
 184
 492
 radius
-1.0
+3.0
 1
 0
 Number
@@ -3050,7 +3058,7 @@ mf12hm-sr
 mf12hm-sr
 0
 1
-0.8
+1.0
 0.01
 1
 NIL
@@ -3065,7 +3073,7 @@ ff12hm-sr
 ff12hm-sr
 0
 1
-0.8
+1.0
 0.01
 1
 NIL
@@ -3080,7 +3088,7 @@ myhm-sr
 myhm-sr
 0
 1
-0.8
+1.0
 0.01
 1
 NIL
@@ -3095,7 +3103,7 @@ fyhm-sr
 fyhm-sr
 0
 1
-0.8
+1.0
 0.01
 1
 NIL
@@ -3110,7 +3118,7 @@ mahm-sr
 mahm-sr
 0
 1
-0.8
+1.0
 0.01
 1
 NIL
@@ -3125,7 +3133,7 @@ fahm-sr
 fahm-sr
 0
 1
-0.8
+1.0
 0.01
 1
 NIL
@@ -4273,6 +4281,112 @@ NetLogo 6.0.2
     </enumeratedValueSet>
     <enumeratedValueSet variable="ff12nhm">
       <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mahm">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff6hm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="radius">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%fawn-female-harvest-tested">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mynhm">
+      <value value="0.01"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="cwd_region">
+      <value value="&quot;Osage County&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="1" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="manhm">
+      <value value="0.01"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf6nhm">
+      <value value="0.055"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12hm">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%adult-male-harvest-tested">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="subregion">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%adult-female-harvest-tested">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-infection">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fahm">
+      <value value="0.2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fynhm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="patchx">
+      <value value="19"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%fawn-male-harvest-tested">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12hm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="patchy">
+      <value value="11"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="myhm">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fanhm">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fyhm">
+      <value value="0.15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12hm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%yearling-male-harvest-tested">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf6hm">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fyhm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="myhm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12hm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff6nhm">
+      <value value="0.055"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ff12nhm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="%yearling-female-harvest-tested">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mahm-sr">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mf12nhm">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fahm-sr">
+      <value value="0.8"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mahm">
       <value value="0.4"/>

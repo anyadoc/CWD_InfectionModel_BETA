@@ -6,6 +6,7 @@
 #Java (needed for NetLogo anyway, if on Linux)
 #system('sudo apt install default-jdk')
 #system('java -version')
+#This only works on Java 8, 9 and above are broken :(
 #install.packages('rJava')
 #install.packages('RNetLogo')
 
@@ -35,7 +36,18 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
   #Path to NetLogo installation based on OS
   if(is.null(nl_path)){
     if(Sys.info()[['sysname']] == "Windows"){
-      nl_path <- 'C:/Program Files (x86)/Netlogo 5.2.0'
+	#Try default location
+	loc1 <- 'C:/Program Files/'
+	find1 <- grep('NetLogo', list.files(loc1),value=TRUE)
+	loc2 <- 'C:/Program Files (x86)/'
+	find2 <- grep('NetLogo', list.files(loc2),value=TRUE)
+	if(length(loc1)>0){
+		nl_path = paste(loc1,find1,'/app',sep='')
+	} else if(length(loc2)>0){
+		nl_path = paste(loc2,find2,'/app',sep='')
+	} else {
+		exit("Can't find Netlogo path")
+	}
     } else if(Sys.info()[['sysname']] == "Linux"){
       nl_path <- paste(system('dirname $(readlink -f $(which netlogo))', 
                         intern=TRUE),'/app',sep='')}
@@ -43,7 +55,7 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
   nl_jarname <- grep('^netlogo-',list.files(nl_path),value=TRUE)
 
   #Get path to model
-  model_path <- paste(getwd(),'/MOOvCWD_v2.1.4.nlogo',sep='')
+  model_path <- paste(getwd(),'/MOOvCWD_v2.1.5.nlogo',sep='')
 
   #Setup CPU cores to use
   if(!is.null(force_cores)){n_cores <- force_cores
@@ -83,8 +95,13 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
     #Set input initial values
     if(!is.null(input)){
       input_row <- input[i,]
-      for (j in 1:length(input)){
-        NLCommand(paste('set',names(input_row[j]),input_row[j]))
+      for (j in 1:length(input_row)){
+        if(is.character(input[,j])){
+          NLCommand(paste('set ',
+                      names(input_row[j]),' "',input_row[j],'"',sep=''))
+        } else {
+          NLCommand(paste('set',names(input_row[j]),input_row[j]))
+        }
       }
     }
 
@@ -108,7 +125,7 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
   cl <- makeCluster(n_cores)
   on.exit(stopCluster(cl))
   clusterExport(cl = cl, ls(), envir = environment())
-  invisible(parLapply(cl, 1:n_cores, .init_NL, nl_path, model_path))
+  invisible(parLapply(cl, 1:n_cores, .init_NL))
   on.exit(closeAllConnections())
   
   #Run simulations
@@ -121,11 +138,10 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
   gc()
 
   #End time
-  end.time <- Sys.time() 
-  time <- round(as.numeric(end.time-start.time,units="mins"),digits=3)
+  end_time <- Sys.time() 
+  run_time <- round(as.numeric(end_time-start_time,units="mins"),digits=3)
   
-  time
-  #out$runtime.minutes <- time
+  print(paste('Runtime',run_time,'mins'))
 
   return(sim)
 

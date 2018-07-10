@@ -32,12 +32,9 @@ out_vars = c('cwd_region', 'seed-infection','d',
              )
 
 
-sim_output <- run_MOOvCWD(nreps=6, #Number of replicate simulations
-                          length_each=12, #Lenth of each sim (in months)
+sim_output <- run_MOOvCWD(length_each=12, #Length of each sim (in months)
+                          save_ticks = c(1,12), #Ticks to save (months 1 & 12 here)
                           input_frame=inp_vars,
                           output_vars=out_vars,
-                          #nl_path #Manually specify path to netlogo app folder
-                          force_cores = 3 #Use 3 cpu cores in parallel
+                          force_cores = 3 #If set to 1, will run in sequence instead
                           )
-
-

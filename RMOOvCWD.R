@@ -24,7 +24,7 @@
 
 library(parallel)
 
-run_MOOvCWD <- function(nreps=1,length_each=5,
+run_MOOvCWD <- function(nreps=NULL,length_each=5,save_ticks=NULL,
                         input_frame=NULL,output_vars='ticks',
                         nl_path=NULL, force_cores=NULL){
 
@@ -59,7 +59,12 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
 
   #Setup CPU cores to use
   if(!is.null(force_cores)){n_cores <- force_cores
-  } else {n_cores <- detectCores()}
+  } else {n_cores <- detectCores() - 1}
+
+  #Get nreps
+  if(is.null(nreps)){
+    nreps <- nrow(input_frame)
+  }
 
   #----------------------------------------------------------------------------
 
@@ -86,17 +91,17 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
     NLLoadModel(model_path)
   }
 
-  .run_NL <- function(i,input=NULL){
+  .run_NL <- function(i){
 
     #Garbage collection in R and Java
     gc()
     jgc()
 
     #Set input initial values
-    if(!is.null(input)){
-      input_row <- input[i,]
+    if(!is.null(input_frame)){
+      input_row <- input_frame[i,]
       for (j in 1:length(input_row)){
-        if(is.character(input[,j])){
+        if(is.character(input_frame[,j])){
           NLCommand(paste('set ',
                       names(input_row[j]),' "',input_row[j],'"',sep=''))
         } else {
@@ -111,6 +116,13 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
     #Run and save output
     out <- NLDoReport(length_each, 'go', output_vars, 
                        as.data.frame=TRUE, df.col.names=output_vars)
+
+    if(!is.null(save_ticks)){
+      out <- out[save_ticks,]
+    }
+
+    out <- cbind(run=i,out) 
+
     return(out)
 
   }
@@ -119,23 +131,40 @@ run_MOOvCWD <- function(nreps=1,length_each=5,
 
   #----------------------------------------------------------------------------
 
-  #Run in parallel-------------------------------------------------------------
+  if(force_cores == 1){
 
-  #Initialize NetLogo in each core
-  cl <- makeCluster(n_cores)
-  on.exit(stopCluster(cl))
-  clusterExport(cl = cl, ls(), envir = environment())
-  invisible(parLapply(cl, 1:n_cores, .init_NL))
-  on.exit(closeAllConnections())
+    #Run in sequence
+    sim <- list()
+    .init_NL(1)
+    for (i in 1:nreps){
+      sim[[i]] <- .run_NL(i)
+    }
+    .stop_NL(1)
+
+  } else {
+
+    #Run in parallel-----------------------------------------------------------
+
+    #Initialize NetLogo in each core
+    cl <- makeCluster(n_cores)
+    on.exit(stopCluster(cl))
+    clusterExport(cl = cl, ls(), envir = environment())
+    invisible(parLapply(cl, 1:n_cores, .init_NL))
+    on.exit(closeAllConnections())
   
-  #Run simulations
-  sim <- clusterApply(cl=cl,x=1:nreps,fun=.run_NL,input=input_frame)
-  
-  #Stop/cleanup
-  invisible(parLapply(cl, 1:n_cores, .stop_NL))
-  stopCluster(cl)
-  closeAllConnections()
-  gc()
+    #Run simulations
+    sim <- clusterApply(cl=cl,x=1:nreps,fun=.run_NL)
+
+    #Stop/cleanup
+    invisible(parLapply(cl, 1:n_cores, .stop_NL))
+    stopCluster(cl)
+    closeAllConnections()
+    gc()
+  }
+
+  #Cleanup output
+  sim <- do.call("rbind",sim)
+  rownames(sim) <- NULL
 
   #End time
   end_time <- Sys.time() 

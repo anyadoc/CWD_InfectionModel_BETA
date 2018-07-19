@@ -114,6 +114,7 @@ globals
   sexratio_monthly
   total_pctforest
   cwd_prev
+  new_infections
 
   ;MOOvPOP( Agent-based model of deer population dynamics) generated deer population is used to initialize this model ('import-world'),
   ;hence global variables from MOOvPOP are also included.
@@ -201,20 +202,20 @@ to setup
   ]
 
   ;set yearling-male-dispersal-rate 0.46
-  file-open (word "cwdinfdy" cwd_region ".csv")                       ;28Feb18 Addition version 2.1.1
-  file-print "seed-infection" file-print seed-infection
-  file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev,CWDArea";##7Mar18added CWDAera
-  file-close
-  if subregion = TRUE [                                        ;v2.1 switch added for subregion
-    file-open (word "subregion" cwd_region ".csv")
-    file-print "seed-infection" file-print seed-infection              ;28Feb18 Addition version 2.1.1
-    file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+Subregion,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev"
-    file-close
-    file-open (word "subregion_tharvest" cwd_region ".csv")
-    file-print "seed-infection" file-print seed-infection             ;28Feb18 Addition version 2.1.1
-    file-print "SubregionArea,MaleFawnCullingRate,FemaleFawnCullingRate,MaleYearlingCullingRate,FemaleYearlingCullingRate,MaleAdultCullingRate,FemaleAdultCullingRate,TotalPreHarvestPopSubregion,TotalCWD+Subregion,AdultMaleCulled,YearlingMaleCulled,FawnMaleCulled,AdultFemaleCulled,YearlingFemaleCulled,FawnFemaleCulled,CWDarea,CWDhuntedDeer,CWDtestedDeer,ObsPrev"
-    file-close
-  ]
+  ;file-open (word "cwdinfdy" cwd_region ".csv")                       ;28Feb18 Addition version 2.1.1
+  ;file-print "seed-infection" file-print seed-infection
+  ;file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev,CWDArea";##7Mar18added CWDAera
+  ;file-close
+  ;if subregion = TRUE [                                        ;v2.1 switch added for subregion
+  ;  file-open (word "subregion" cwd_region ".csv")
+  ;  file-print "seed-infection" file-print seed-infection              ;28Feb18 Addition version 2.1.1
+  ;  file-print "AdultMale,YearlingMale,FawnMale,AdultFemale,YearlingFemale,FawnFemale,TotalPreHarvestPop,AdultMaleCWD+,YearlingMaleCWD+,FawnMaleCWD+,AdultFemaleCWD+,YearlingFemaleCWD+,FawnFemaleCWD+,TotalCWD+Subregion,AdultMaleHarvest,YearlingMaleHarvest,FawnMaleHarvest,AdultFemaleHarvest,YearlingFemaleHarvest,FawnFemaleHarvest,AdultMaleTested,YearlingMaleTested,FawnMaleTested,AdultFemaleTested,YearlingFemaleTested,FawnFemaleTested,CWDhuntedDeer,CWDtestedDeer,DetProb,ObsPrev"
+    ;file-close
+    ;file-open (word "subregion_tharvest" cwd_region ".csv")
+    ;file-print "seed-infection" file-print seed-infection             ;28Feb18 Addition version 2.1.1
+    ;file-print "SubregionArea,MaleFawnCullingRate,FemaleFawnCullingRate,MaleYearlingCullingRate,FemaleYearlingCullingRate,MaleAdultCullingRate,FemaleAdultCullingRate,TotalPreHarvestPopSubregion,TotalCWD+Subregion,AdultMaleCulled,YearlingMaleCulled,FawnMaleCulled,AdultFemaleCulled,YearlingFemaleCulled,FawnFemaleCulled,CWDarea,CWDhuntedDeer,CWDtestedDeer,ObsPrev"
+    ;file-close
+  ;]
 end
 to setup-landscape
   if (cwd_region = "Boone County")[import-world "PostHarvestPopulationBooneCounty_v2.csv"]
@@ -489,33 +490,33 @@ to go
       set op precision (tcwd / (tamt + tymt + tfmt + taft + tyft + tfft)) 3
       set vals2 (list (tamh) (tymh) (tfamh) (tafh) (tyfh) (tfafh) (tamt) (tymt) (tfmt) (taft) (tyft) (tfft) (hcwd) (tcwd) (pdcwd) (op) (cwd_area));##7Mar18 added cwd-area
       set vals (sentence vals1 vals2)
-      file-open (word "cwdinfdy" cwd_region ".csv")
-      file-type first vals
-      foreach but-first vals [ [ ?1 ] ->
-        file-type "," file-type ?1
-        ]
-      file-print""
-      file-close
+      ;file-open (word "cwdinfdy" cwd_region ".csv")
+      ;file-type first vals
+      ;foreach but-first vals [ [ ?1 ] ->
+      ;  file-type "," file-type ?1
+      ;  ]
+      ;file-print""
+      ;file-close
       if subregion = TRUE [
         carefully [ set op-sr precision (tcwd-sr / (tamt-sr + tymt-sr + tfmt-sr + taft-sr + tyft-sr + tfft-sr)) 3 ] [ set op-sr 0 ]
         set vals4 (list (tamh-sr) (tymh-sr) (tfamh-sr) (tafh-sr) (tyfh-sr) (tfafh-sr) (tamt-sr) (tymt-sr) (tfmt-sr) (taft-sr) (tyft-sr) (tfft-sr) (hcwd-sr) (tcwd-sr) (pdcwd-sr) (op-sr))
         set vals5 (sentence vals3 vals4)
-        file-open (word "subregion" cwd_region ".csv")
-        file-type first vals5
-        foreach but-first vals5 [ [ ?1 ] ->
-          file-type "," file-type ?1
-          ]
-        file-print""
-        file-close
+      ;  file-open (word "subregion" cwd_region ".csv")
+      ;  file-type first vals5
+      ;  foreach but-first vals5 [ [ ?1 ] ->
+      ;    file-type "," file-type ?1
+       ;   ]
+        ;file-print""
+        ;file-close
         set vals7 (list (tamc-sr) (tymc-sr) (tfamc-sr) (tafc-sr) (tyfc-sr) (tfafc-sr) (cwd_area) (hcwd-sr) (tcwd-sr) (op-sr))
         set vals8 (sentence vals6 vals7)
-        file-open (word "subregion_tharvest" cwd_region ".csv")
-        file-type first vals8
-        foreach but-first vals8 [ [ ?1 ] ->
-          file-type "," file-type ?1
-        ]
-        file-print""
-        file-close
+        ;file-open (word "subregion_tharvest" cwd_region ".csv")
+        ;file-type first vals8
+        ;foreach but-first vals8 [ [ ?1 ] ->
+        ;  file-type "," file-type ?1
+        ;]
+        ;file-print""
+        ;file-close
       ]
       ]
     ]
@@ -634,6 +635,7 @@ to go
   set sexratio_monthly (count deers with [sex = 2]) / total_deer
   set total_pctforest (sum [forest-percent] of patches) / (count patches)
   set cwd_prev (count deers with [cwd = 1]) / total_deer
+  set new_infections count deers with [cwd = 1 and cwdpr = 0]
 
   tick
 end

@@ -172,6 +172,9 @@ run_MOOvCWD <- function(nreps=NULL,length_each=5,save_ticks=NULL,
   
   print(paste('Runtime',run_time,'mins'))
 
+  write.csv(sim,file=paste('sim_',format(Sys.time(),'%y-%m-%d_%H_%M'),
+						  '.csv',sep=''),row.names=F)
+  
   return(sim)
 
 }

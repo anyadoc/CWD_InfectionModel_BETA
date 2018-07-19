@@ -5,7 +5,7 @@ source('RMOOvCWD.R')
 #Dims: nrows = number of sims, ncols = number of parameters to set in each
 #If a parameter is not set, it will use whatever the default is in NetLogo
 inp_vars = data.frame(
-              cwd_region = c(rep('Linn County',3),rep('Boone County',3)),
+              cwd_region = c(rep('Linn County',3),rep('Chariton County',3)),
               #Names with dashes have to be surrounded w/backticks
               `seed-infection` = rep(c(5,7,10),2),
               #IMPORTANT to preserve dashes/formatting
@@ -22,7 +22,7 @@ out_vars = c('cwd_region', 'seed-infection','d',
              'total_deer','deer_density','sexratio_monthly',
              'total_pctforest',
              #Overall prevalence
-             'cwd_prev','cwd_area',
+             'cwd_prev','new_infections','cwd_area',
              #Hunting mortality
              'mf6hm','ff6hm','mf12hm','ff12hm','myhm','fyhm','mahm','fahm',
              #Area of culling subregion
@@ -36,5 +36,9 @@ sim_output <- run_MOOvCWD(length_each=12, #Length of each sim (in months)
                           save_ticks = c(1,12), #Ticks to save (months 1 & 12 here)
                           input_frame=inp_vars,
                           output_vars=out_vars,
-                          force_cores = 3 #If set to 1, will run in sequence instead
+                          force_cores = 1 #If set to 1, will run in sequence instead
                           )
+
+#TODO
+#large starting n and starting radius
+#culling area

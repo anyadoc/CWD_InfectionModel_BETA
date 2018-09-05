@@ -8,6 +8,7 @@ inp_vars = data.frame(
               cwd_region = c(rep('Linn County',3),rep('Chariton County',3)),
               #Names with dashes have to be surrounded w/backticks
               `seed-infection` = rep(c(5,7,10),2),
+              myhm = rep(c(0.1,0.2,0.3),2),
               #IMPORTANT to preserve dashes/formatting
               check.names=FALSE,
               stringsAsFactors=FALSE

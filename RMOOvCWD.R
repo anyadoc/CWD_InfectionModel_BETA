@@ -98,6 +98,7 @@ run_MOOvCWD <- function(nreps=NULL,length_each=5,save_ticks=NULL,
     jgc()
 
     #Set input initial values
+    set_inits <- function(){
     if(!is.null(input_frame)){
       input_row <- input_frame[i,]
       for (j in 1:length(input_row)){
@@ -109,9 +110,14 @@ run_MOOvCWD <- function(nreps=NULL,length_each=5,save_ticks=NULL,
         }
       }
     }
+    }
+
+    set_inits()
 
     #Setup NetLogo model
     NLCommand("setup")
+
+    set_inits()
 
     #Run and save output
     out <- NLDoReport(length_each, 'go', output_vars, 
